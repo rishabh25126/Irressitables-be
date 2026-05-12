@@ -9,6 +9,7 @@ const rateLimit = require('express-rate-limit');
 
 const env = require('./config/env');
 const logger = require('./config/logger');
+const connectDB = require('./config/db');
 const requestId = require('./middleware/requestId.middleware');
 const errorHandler = require('./middleware/error.middleware');
 
@@ -118,6 +119,16 @@ if (env.enableDebugLogsRoute) {
 // Health check
 app.get('/api/health', (req, res) => {
   res.status(200).json({ success: true, message: 'Server is healthy' });
+});
+
+app.use('/api', async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    logger.error({ err, reqId: req.id, path: req.originalUrl }, 'Database connection failed');
+    res.status(503).json({ success: false, error: 'Database unavailable' });
+  }
 });
 
 app.use('/api/auth', authRoutes);
