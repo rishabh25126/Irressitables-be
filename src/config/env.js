@@ -23,6 +23,9 @@ required.forEach((key) => {
 const env = {
   port: process.env.PORT || 5000,
   nodeEnv: process.env.NODE_ENV || 'development',
+  logLevel:
+    process.env.LOG_LEVEL ||
+    (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
   mongoUri: process.env.MONGO_URI,
   jwt: {
     accessSecret: process.env.JWT_ACCESS_SECRET,
@@ -37,6 +40,12 @@ const env = {
     bucketName: process.env.S3_BUCKET_NAME,
   },
   clientUrl: process.env.CLIENT_URL,
+  /** In-memory /logs debug route: on in non-production, or set DEBUG_LOGS_ROUTE=true */
+  enableDebugLogsRoute:
+    process.env.NODE_ENV !== 'production' ||
+    process.env.DEBUG_LOGS_ROUTE === 'true',
+  /** If set, GET /logs requires header X-Logs-Secret matching this value */
+  logsRouteSecret: process.env.LOGS_ROUTE_SECRET || '',
 };
 
 module.exports = env;

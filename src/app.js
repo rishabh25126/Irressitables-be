@@ -2,11 +2,14 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
-const morgan = require('morgan');
+const pinoHttp = require('pino-http');
+const stdSerializers = require('pino-std-serializers');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 
 const env = require('./config/env');
+const logger = require('./config/logger');
+const requestId = require('./middleware/requestId.middleware');
 const errorHandler = require('./middleware/error.middleware');
 
 // Route imports
@@ -16,13 +19,50 @@ const documentRoutes = require('./routes/document.routes');
 const investorAccessRoutes = require('./routes/investorAccess.routes');
 const requestRoutes = require('./routes/request.routes');
 const adminRoutes = require('./routes/admin.routes');
+const logsRoutes = require('./routes/logs.routes');
 
 const app = express();
+
+// Vercel and other reverse proxies: correct client IP for rate limiting
+if (process.env.VERCEL) {
+  app.set('trust proxy', 1);
+}
 
 // --- Security & Utility Middleware ---
 
 // Set security HTTP headers
 app.use(helmet());
+
+app.use(requestId);
+
+app.use(
+  pinoHttp({
+    logger,
+    genReqId: (req) => req.id,
+    serializers: {
+      req: (req) => {
+        const serialized = stdSerializers.req(req);
+        if (serialized.headers) {
+          if (serialized.headers.authorization) {
+            serialized.headers.authorization = '[Redacted]';
+          }
+          if (serialized.headers.cookie) {
+            serialized.headers.cookie = '[Redacted]';
+          }
+        }
+        return serialized;
+      },
+    },
+    autoLogging: {
+      ignore: (req) => {
+        const path = (req.originalUrl || req.url || '').split('?')[0];
+        if (path === '/api/health') return true;
+        if (path === '/logs') return true;
+        return false;
+      },
+    },
+  })
+);
 
 // Enable CORS (Whitelist client domain)
 app.use(
@@ -58,14 +98,11 @@ app.use(cookieParser());
 // Compress responses
 app.use(compression());
 
-// Logging
-if (env.nodeEnv === 'development') {
-  app.use(morgan('dev'));
-} else {
-  app.use(morgan('combined'));
-}
-
 // --- Routes ---
+
+if (env.enableDebugLogsRoute) {
+  app.use('/logs', logsRoutes);
+}
 
 // Health check
 app.get('/api/health', (req, res) => {

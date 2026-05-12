@@ -1,4 +1,5 @@
 const AuditLog = require('../models/AuditLog');
+const logger = require('../config/logger');
 
 /**
  * Reusable middleware to log an action.
@@ -19,7 +20,7 @@ const logAction = (action, resource) => {
         userAgent: req.get('user-agent'),
       });
     } catch (err) {
-      console.error(`Failed to write audit log for ${action}:`, err);
+      logger.error({ err, action, resource, reqId: req.id }, 'Failed to write audit log');
     }
     next();
   };

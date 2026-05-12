@@ -1,4 +1,8 @@
+const logger = require('../config/logger');
 const env = require('../config/env');
+
+const exposeErrorDetails =
+  env.nodeEnv === 'development' || process.env.EXPOSE_ERROR_MESSAGE === 'true';
 
 /**
  * Central error handler — catches all errors passed via next(err).
@@ -7,12 +11,16 @@ const env = require('../config/env');
  * Returns a consistent error shape in all cases.
  */
 const errorHandler = (err, req, res, next) => {
-  // Log the full error in development; suppress stack in production
+  const payload = {
+    err,
+    reqId: req.id,
+    method: req.method,
+    path: req.originalUrl || req.url,
+  };
   if (env.nodeEnv === 'development') {
-    console.error(`[ERROR] ${err.message}`, err.stack);
-  } else {
-    console.error(`[ERROR] ${err.message}`);
+    payload.stack = err.stack;
   }
+  logger.error(payload, err.message);
 
   // Mongoose validation error
   if (err.name === 'ValidationError') {
@@ -40,9 +48,17 @@ const errorHandler = (err, req, res, next) => {
 
   // Default fallback
   const statusCode = err.statusCode || 500;
-  const message = err.statusCode ? err.message : 'Internal server error';
+  const message =
+    err.statusCode || exposeErrorDetails
+      ? err.message || 'Internal server error'
+      : 'Internal server error';
 
-  return res.status(statusCode).json({ success: false, error: message });
+  const body = { success: false, error: message };
+  if (exposeErrorDetails && err.stack) {
+    body.stack = err.stack;
+  }
+
+  return res.status(statusCode).json(body);
 };
 
 module.exports = errorHandler;
