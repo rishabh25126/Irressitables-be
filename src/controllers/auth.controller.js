@@ -9,7 +9,7 @@ const env = require('../config/env');
 const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,       // Not accessible via JS — XSS protection
   secure: env.nodeEnv === 'production', // HTTPS only in production
-  sameSite: env.nodeEnv === 'production' ? 'strict' : 'lax',
+  sameSite: env.nodeEnv === 'production' ? 'none' : 'lax',
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
 };
 
@@ -79,7 +79,14 @@ const refreshToken = asyncHandler(async (req, res) => {
   }
 
   const newAccessToken = signAccessToken({ id: user._id, role: user.role });
-  return success(res, { accessToken: newAccessToken }, 'Token refreshed');
+  return success(
+    res,
+    {
+      accessToken: newAccessToken,
+      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+    },
+    'Token refreshed'
+  );
 });
 
 /**
