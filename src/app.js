@@ -14,6 +14,7 @@ const authRoutes = require('./routes/auth.routes');
 const startupRoutes = require('./routes/startup.routes');
 const documentRoutes = require('./routes/document.routes');
 const investorAccessRoutes = require('./routes/investorAccess.routes');
+const requestRoutes = require('./routes/request.routes');
 const adminRoutes = require('./routes/admin.routes');
 
 const app = express();
@@ -75,6 +76,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/startups', startupRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/access', investorAccessRoutes);
+app.use('/api/requests', requestRoutes);
 app.use('/api/admin', adminRoutes);
 
 // --- Error Handling ---

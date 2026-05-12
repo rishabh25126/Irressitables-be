@@ -38,19 +38,15 @@ const userSchema = new mongoose.Schema(
 );
 
 // Hash password before saving
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('passwordHash')) return next();
+userSchema.pre('save', async function () {
+  if (!this.isModified('passwordHash')) return;
   this.passwordHash = await bcrypt.hash(this.passwordHash, 12);
-  next();
 });
 
 // Compare plain password with stored hash
 userSchema.methods.comparePassword = async function (plainPassword) {
   return bcrypt.compare(plainPassword, this.passwordHash);
 };
-
-// Index for fast email lookups on login
-userSchema.index({ email: 1 });
 
 const User = mongoose.model('User', userSchema);
 module.exports = User;

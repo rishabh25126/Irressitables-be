@@ -9,7 +9,7 @@ const env = require('../config/env');
 const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,       // Not accessible via JS — XSS protection
   secure: env.nodeEnv === 'production', // HTTPS only in production
-  sameSite: 'strict',
+  sameSite: env.nodeEnv === 'production' ? 'strict' : 'lax',
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
 };
 

@@ -4,7 +4,7 @@ const InvestorAccess = require('../models/InvestorAccess');
 const { uploadToS3, getPresignedUrl, deleteFromS3 } = require('../utils/s3');
 const { success, error } = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 
 /**
  * GET /api/startups/:id/documents
@@ -43,7 +43,7 @@ const uploadDocument = asyncHandler(async (req, res) => {
 
   // Build a unique, organized S3 key
   const ext = req.file.originalname.split('.').pop();
-  const s3Key = `documents/${startupId}/${uuidv4()}.${ext}`;
+  const s3Key = `documents/${startupId}/${crypto.randomUUID()}.${ext}`;
 
   await uploadToS3({
     buffer: req.file.buffer,

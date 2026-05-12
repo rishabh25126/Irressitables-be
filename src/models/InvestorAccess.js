@@ -12,6 +12,18 @@ const investorAccessSchema = new mongoose.Schema(
       ref: 'Startup',
       required: true,
     },
+    investedAmount: {
+      type: Number,
+      default: 0,
+    },
+    shares: {
+      type: Number,
+      default: 0,
+    },
+    equityPercentage: {
+      type: Number,
+      default: 0,
+    },
     grantedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

@@ -16,7 +16,12 @@ const getMyStartups = asyncHandler(async (req, res) => {
     })
     .sort({ createdAt: -1 });
 
-  const startups = accessRecords.map((a) => a.startupId);
+  const startups = accessRecords.map((a) => ({
+    startup: a.startupId,
+    investedAmount: a.investedAmount,
+    shares: a.shares,
+    equityPercentage: a.equityPercentage,
+  }));
 
   return success(res, { startups });
 });
@@ -24,21 +29,26 @@ const getMyStartups = asyncHandler(async (req, res) => {
 /**
  * POST /api/admin/access
  * Admin only. Grants an investor access to a specific startup.
- * Body: { investorId, startupId }
+ * Body: { investorId, startupId, investedAmount, shares, equityPercentage }
  */
 const assign = asyncHandler(async (req, res) => {
-  const { investorId, startupId } = req.body;
+  const { investorId, startupId, investedAmount = 0, shares = 0, equityPercentage = 0 } = req.body;
 
   // Confirm startup exists
   const startup = await Startup.findById(startupId);
   if (!startup) return error(res, 'Startup not found.', 404);
 
-  // Create access record (unique index prevents duplicates)
-  const access = await InvestorAccess.create({
-    investorId,
-    startupId,
-    grantedBy: req.user._id,
-  });
+  // Use findOneAndUpdate with upsert to allow updating existing equity or creating new access
+  const access = await InvestorAccess.findOneAndUpdate(
+    { investorId, startupId },
+    { 
+      investedAmount, 
+      shares, 
+      equityPercentage, 
+      grantedBy: req.user._id 
+    },
+    { new: true, upsert: true }
+  );
 
   await AuditLog.create({
     userId: req.user._id,
