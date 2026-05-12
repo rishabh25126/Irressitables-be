@@ -22,6 +22,12 @@ async function ensureDbConnected() {
     });
   }
   await dbConnectPromise;
+
+  if (mongoose.connection.readyState !== 1) {
+    const msg = `MongoDB not ready (readyState=${mongoose.connection.readyState})`;
+    logger.error(msg);
+    throw new Error(msg);
+  }
 }
 
 module.exports = async (req, res) => {
