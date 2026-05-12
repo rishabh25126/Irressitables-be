@@ -40,6 +40,15 @@ const env = {
     bucketName: process.env.S3_BUCKET_NAME,
   },
   clientUrl: process.env.CLIENT_URL,
+  /**
+   * When true (default): CORS reflects any request Origin so the API works from any site/IP.
+   * Set CORS_ALLOW_ANY_ORIGIN=false to allow only origins listed in CLIENT_URL (comma-separated).
+   */
+  corsAllowAnyOrigin: process.env.CORS_ALLOW_ANY_ORIGIN !== 'false',
+  /** Origins allowed when corsAllowAnyOrigin is false */
+  corsAllowedOrigins: process.env.CLIENT_URL.split(',')
+    .map((s) => s.trim())
+    .filter(Boolean),
   /** In-memory /logs debug route: on in non-production, or set DEBUG_LOGS_ROUTE=true */
   enableDebugLogsRoute:
     process.env.NODE_ENV !== 'production' ||

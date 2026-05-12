@@ -6,6 +6,11 @@ function isServerlessRuntime() {
   return !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
 }
 
+if (isServerlessRuntime()) {
+  // Fail fast if a query runs without a live connection (avoids 10s buffer timeout)
+  mongoose.set('bufferCommands', false);
+}
+
 function defaultRetryCount() {
   // Remaining retries after a failed attempt (serverless: 1 → 2 tries total; VM: 5 → 6 tries)
   return isServerlessRuntime() ? 1 : 5;
@@ -27,10 +32,20 @@ const connectDB = async (retriesLeft = defaultRetryCount()) => {
 
   const serverSelectionTimeoutMS = isServerlessRuntime() ? 10000 : 5000;
 
+  const options = {
+    serverSelectionTimeoutMS,
+    ...(isServerlessRuntime()
+      ? {
+          maxPoolSize: 5,
+          minPoolSize: 0,
+          // Some serverless hosts resolve IPv6 first; Atlas SRV + IPv4 is more reliable
+          family: 4,
+        }
+      : {}),
+  };
+
   try {
-    const conn = await mongoose.connect(env.mongoUri, {
-      serverSelectionTimeoutMS,
-    });
+    const conn = await mongoose.connect(env.mongoUri, options);
     logger.info({ host: conn.connection.host }, 'MongoDB connected');
     return conn;
   } catch (error) {

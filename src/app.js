@@ -57,18 +57,28 @@ app.use(
       ignore: (req) => {
         const path = (req.originalUrl || req.url || '').split('?')[0];
         if (path === '/api/health') return true;
-        if (path === '/logs') return true;
+        if (path === '/logs' || path === '/api/logs') return true;
         return false;
       },
     },
   })
 );
 
-// Enable CORS (Whitelist client domain)
+// CORS: default allows any browser Origin (reflect Origin header; works with credentials)
 app.use(
   cors({
-    origin: env.clientUrl,
-    credentials: true, // Allow cookies to be sent with requests
+    origin: env.corsAllowAnyOrigin
+      ? true
+      : (origin, cb) => {
+          if (!origin) {
+            return cb(null, true);
+          }
+          if (env.corsAllowedOrigins.includes(origin)) {
+            return cb(null, true);
+          }
+          return cb(null, false);
+        },
+    credentials: true,
   })
 );
 
@@ -102,6 +112,7 @@ app.use(compression());
 
 if (env.enableDebugLogsRoute) {
   app.use('/logs', logsRoutes);
+  app.use('/api/logs', logsRoutes);
 }
 
 // Health check
