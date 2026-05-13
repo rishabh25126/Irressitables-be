@@ -1,25 +1,25 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose")
 
 const equityRequestSchema = new mongoose.Schema(
   {
     investorId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
     },
     businessId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Business',
+      ref: "Business",
       required: true,
     },
     type: {
       type: String,
-      enum: ['NEW_INVESTMENT', 'REVISION', 'PUBLIC_INTEREST'],
+      enum: ["NEW_INVESTMENT", "REVISION", "PUBLIC_INTEREST"],
       required: true,
     },
     status: {
       type: String,
-      enum: ['PENDING', 'REVIEWING', 'REJECTED', 'ACCEPTED', 'APPROVED'],
-      default: 'PENDING',
+      enum: ["PENDING", "REVIEWING", "REJECTED", "ACCEPTED", "APPROVED"],
+      default: "PENDING",
     },
     requestedAmount: {
       type: Number,
@@ -46,14 +46,14 @@ const equityRequestSchema = new mongoose.Schema(
     },
     handledBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
     },
   },
   { timestamps: true }
-);
+)
 
-equityRequestSchema.index({ status: 1, createdAt: 1 });
-equityRequestSchema.index({ businessId: 1, createdAt: 1 });
+equityRequestSchema.index({ status: 1, createdAt: 1 })
+equityRequestSchema.index({ businessId: 1, createdAt: 1 })
 
-const EquityRequest = mongoose.model('EquityRequest', equityRequestSchema);
-module.exports = EquityRequest;
+const EquityRequest = mongoose.model("EquityRequest", equityRequestSchema)
+module.exports = EquityRequest

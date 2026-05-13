@@ -4,34 +4,34 @@
  */
 
 const required = [
-  'MONGO_URI',
-  'JWT_ACCESS_SECRET',
-  'JWT_REFRESH_SECRET',
-  'AWS_REGION',
-  'AWS_ACCESS_KEY_ID',
-  'AWS_SECRET_ACCESS_KEY',
-  'S3_BUCKET_NAME',
-  'CLIENT_URL',
-];
+  "MONGO_URI",
+  "JWT_ACCESS_SECRET",
+  "JWT_REFRESH_SECRET",
+  "AWS_REGION",
+  "AWS_ACCESS_KEY_ID",
+  "AWS_SECRET_ACCESS_KEY",
+  "S3_BUCKET_NAME",
+  "CLIENT_URL",
+]
 
 required.forEach((key) => {
   if (!process.env[key]) {
-    throw new Error(`Missing required environment variable: ${key}`);
+    throw new Error(`Missing required environment variable: ${key}`)
   }
-});
+})
 
 const env = {
   port: process.env.PORT || 5000,
-  nodeEnv: process.env.NODE_ENV || 'development',
+  nodeEnv: process.env.NODE_ENV || "development",
   logLevel:
     process.env.LOG_LEVEL ||
-    (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
+    (process.env.NODE_ENV === "production" ? "info" : "debug"),
   mongoUri: process.env.MONGO_URI,
   jwt: {
     accessSecret: process.env.JWT_ACCESS_SECRET,
     refreshSecret: process.env.JWT_REFRESH_SECRET,
-    accessExpires: process.env.JWT_ACCESS_EXPIRES || '15m',
-    refreshExpires: process.env.JWT_REFRESH_EXPIRES || '5d',
+    accessExpires: process.env.JWT_ACCESS_EXPIRES || "15m",
+    refreshExpires: process.env.JWT_REFRESH_EXPIRES || "5d",
   },
   aws: {
     region: process.env.AWS_REGION,
@@ -45,18 +45,19 @@ const env = {
    * In production, require explicit allowlisted origins unless CORS_ALLOW_ANY_ORIGIN=true is set intentionally.
    */
   corsAllowAnyOrigin:
-    process.env.CORS_ALLOW_ANY_ORIGIN === 'true' ||
-    (!process.env.CORS_ALLOW_ANY_ORIGIN && (process.env.NODE_ENV || 'development') !== 'production'),
+    process.env.CORS_ALLOW_ANY_ORIGIN === "true" ||
+    (!process.env.CORS_ALLOW_ANY_ORIGIN &&
+      (process.env.NODE_ENV || "development") !== "production"),
   /** Origins allowed when corsAllowAnyOrigin is false */
-  corsAllowedOrigins: process.env.CLIENT_URL.split(',')
+  corsAllowedOrigins: process.env.CLIENT_URL.split(",")
     .map((s) => s.trim())
     .filter(Boolean),
   /** In-memory /logs debug route: on in non-production, or set DEBUG_LOGS_ROUTE=true */
   enableDebugLogsRoute:
-    process.env.NODE_ENV !== 'production' ||
-    process.env.DEBUG_LOGS_ROUTE === 'true',
+    process.env.NODE_ENV !== "production" ||
+    process.env.DEBUG_LOGS_ROUTE === "true",
   /** If set, GET /logs requires header X-Logs-Secret matching this value */
-  logsRouteSecret: process.env.LOGS_ROUTE_SECRET || '',
-};
+  logsRouteSecret: process.env.LOGS_ROUTE_SECRET || "",
+}
 
-module.exports = env;
+module.exports = env

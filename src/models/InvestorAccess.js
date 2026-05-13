@@ -1,15 +1,15 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose")
 
 const investorAccessSchema = new mongoose.Schema(
   {
     investorId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
     },
     businessId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Business',
+      ref: "Business",
       required: true,
     },
     investedAmount: {
@@ -26,15 +26,15 @@ const investorAccessSchema = new mongoose.Schema(
     },
     grantedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
     },
   },
   { timestamps: true }
-);
+)
 
 // Prevent duplicate access grants for same investor+business pair
-investorAccessSchema.index({ investorId: 1, businessId: 1 }, { unique: true });
+investorAccessSchema.index({ investorId: 1, businessId: 1 }, { unique: true })
 
-const InvestorAccess = mongoose.model('InvestorAccess', investorAccessSchema);
-module.exports = InvestorAccess;
+const InvestorAccess = mongoose.model("InvestorAccess", investorAccessSchema)
+module.exports = InvestorAccess

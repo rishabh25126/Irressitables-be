@@ -1,7 +1,11 @@
-const { S3Client, DeleteObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
-const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
-const { Upload } = require('@aws-sdk/lib-storage');
-const env = require('../config/env');
+const {
+  S3Client,
+  DeleteObjectCommand,
+  GetObjectCommand,
+} = require("@aws-sdk/client-s3")
+const { getSignedUrl } = require("@aws-sdk/s3-request-presigner")
+const { Upload } = require("@aws-sdk/lib-storage")
+const env = require("../config/env")
 
 // Initialize S3 client once, reuse across the app
 const s3Client = new S3Client({
@@ -10,7 +14,7 @@ const s3Client = new S3Client({
     accessKeyId: env.aws.accessKeyId,
     secretAccessKey: env.aws.secretAccessKey,
   },
-});
+})
 
 /**
  * Uploads a file buffer to S3.
@@ -30,11 +34,11 @@ const uploadToS3 = async ({ buffer, key, mimeType }) => {
       ContentType: mimeType,
       // No ACL — bucket is private, access via signed URLs only
     },
-  });
+  })
 
-  await upload.done();
-  return key;
-};
+  await upload.done()
+  return key
+}
 
 /**
  * Generates a pre-signed URL for a private S3 object.
@@ -47,10 +51,10 @@ const getPresignedUrl = async (key, expiresInSeconds = 900) => {
   const command = new GetObjectCommand({
     Bucket: env.aws.bucketName,
     Key: key,
-  });
+  })
 
-  return getSignedUrl(s3Client, command, { expiresIn: expiresInSeconds });
-};
+  return getSignedUrl(s3Client, command, { expiresIn: expiresInSeconds })
+}
 
 /**
  * Permanently deletes an object from S3.
@@ -62,7 +66,7 @@ const deleteFromS3 = async (key) => {
       Bucket: env.aws.bucketName,
       Key: key,
     })
-  );
-};
+  )
+}
 
-module.exports = { uploadToS3, getPresignedUrl, deleteFromS3 };
+module.exports = { uploadToS3, getPresignedUrl, deleteFromS3 }

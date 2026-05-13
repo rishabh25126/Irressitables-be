@@ -1,10 +1,10 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose")
 
 const auditLogSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
     },
     action: {
@@ -30,10 +30,10 @@ const auditLogSchema = new mongoose.Schema(
     },
   },
   { timestamps: true }
-);
+)
 
 // Index for fast user-specific audit trail queries
-auditLogSchema.index({ userId: 1, createdAt: -1 });
+auditLogSchema.index({ userId: 1, createdAt: -1 })
 
-const AuditLog = mongoose.model('AuditLog', auditLogSchema);
-module.exports = AuditLog;
+const AuditLog = mongoose.model("AuditLog", auditLogSchema)
+module.exports = AuditLog

@@ -1,21 +1,21 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose")
 
 const documentSchema = new mongoose.Schema(
   {
     businessId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Business',
+      ref: "Business",
       required: true,
     },
     name: {
       type: String,
-      required: [true, 'Document name is required'],
+      required: [true, "Document name is required"],
       trim: true,
     },
     category: {
       type: String,
       required: true,
-      enum: ['legal', 'financial', 'due-diligence', 'compliance', 'pitch-deck'],
+      enum: ["legal", "financial", "due-diligence", "compliance", "pitch-deck"],
     },
     s3Key: {
       type: String,
@@ -31,20 +31,20 @@ const documentSchema = new mongoose.Schema(
     },
     accessLevel: {
       type: String,
-      enum: ['public', 'investor'],
-      default: 'investor',
+      enum: ["public", "investor"],
+      default: "investor",
     },
     uploadedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
     },
   },
   { timestamps: true }
-);
+)
 
 // Index for efficient lookups by business
-documentSchema.index({ businessId: 1, category: 1 });
+documentSchema.index({ businessId: 1, category: 1 })
 
-const Document = mongoose.model('Document', documentSchema);
-module.exports = Document;
+const Document = mongoose.model("Document", documentSchema)
+module.exports = Document

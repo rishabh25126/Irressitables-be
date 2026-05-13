@@ -1,41 +1,41 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const compression = require('compression');
-const pinoHttp = require('pino-http');
-const stdSerializers = require('pino-std-serializers');
-const cookieParser = require('cookie-parser');
-const rateLimit = require('express-rate-limit');
+const express = require("express")
+const cors = require("cors")
+const helmet = require("helmet")
+const compression = require("compression")
+const pinoHttp = require("pino-http")
+const stdSerializers = require("pino-std-serializers")
+const cookieParser = require("cookie-parser")
+const rateLimit = require("express-rate-limit")
 
-const env = require('./config/env');
-const logger = require('./config/logger');
-const connectDB = require('./config/db');
-const requestId = require('./middleware/requestId.middleware');
-const errorHandler = require('./middleware/error.middleware');
+const env = require("./config/env")
+const logger = require("./config/logger")
+const connectDB = require("./config/db")
+const requestId = require("./middleware/requestId.middleware")
+const errorHandler = require("./middleware/error.middleware")
 
 // Route imports
-const authRoutes = require('./routes/auth.routes');
-const businessRoutes = require('./routes/business.routes');
-const documentRoutes = require('./routes/document.routes');
-const investorAccessRoutes = require('./routes/investorAccess.routes');
-const ownerAccessRoutes = require('./routes/ownerAccess.routes');
-const requestRoutes = require('./routes/request.routes');
-const adminRoutes = require('./routes/admin.routes');
-const logsRoutes = require('./routes/logs.routes');
+const authRoutes = require("./routes/auth.routes")
+const businessRoutes = require("./routes/business.routes")
+const documentRoutes = require("./routes/document.routes")
+const investorAccessRoutes = require("./routes/investorAccess.routes")
+const ownerAccessRoutes = require("./routes/ownerAccess.routes")
+const requestRoutes = require("./routes/request.routes")
+const adminRoutes = require("./routes/admin.routes")
+const logsRoutes = require("./routes/logs.routes")
 
-const app = express();
+const app = express()
 
 // Vercel and other reverse proxies: correct client IP for rate limiting
 if (process.env.VERCEL) {
-  app.set('trust proxy', 1);
+  app.set("trust proxy", 1)
 }
 
 // --- Security & Utility Middleware ---
 
 // Set security HTTP headers
-app.use(helmet());
+app.use(helmet())
 
-app.use(requestId);
+app.use(requestId)
 
 app.use(
   pinoHttp({
@@ -43,30 +43,30 @@ app.use(
     genReqId: (req) => req.id,
     serializers: {
       req: (req) => {
-        const serialized = stdSerializers.req(req);
+        const serialized = stdSerializers.req(req)
         if (serialized.headers) {
-          const sanitizedHeaders = { ...serialized.headers };
+          const sanitizedHeaders = { ...serialized.headers }
           if (sanitizedHeaders.authorization) {
-            sanitizedHeaders.authorization = '[Redacted]';
+            sanitizedHeaders.authorization = "[Redacted]"
           }
           if (sanitizedHeaders.cookie) {
-            sanitizedHeaders.cookie = '[Redacted]';
+            sanitizedHeaders.cookie = "[Redacted]"
           }
-          serialized.headers = sanitizedHeaders;
+          serialized.headers = sanitizedHeaders
         }
-        return serialized;
+        return serialized
       },
     },
     autoLogging: {
       ignore: (req) => {
-        const path = (req.originalUrl || req.url || '').split('?')[0];
-        if (path === '/api/health') return true;
-        if (path === '/logs' || path === '/api/logs') return true;
-        return false;
+        const path = (req.originalUrl || req.url || "").split("?")[0]
+        if (path === "/api/health") return true
+        if (path === "/logs" || path === "/api/logs") return true
+        return false
       },
     },
   })
-);
+)
 
 // CORS: default allows any browser Origin (reflect Origin header; works with credentials)
 app.use(
@@ -75,101 +75,116 @@ app.use(
       ? true
       : (origin, cb) => {
           if (!origin) {
-            return cb(null, true);
+            return cb(null, true)
           }
           if (env.corsAllowedOrigins.includes(origin)) {
-            return cb(null, true);
+            return cb(null, true)
           }
-          return cb(null, false);
+          return cb(null, false)
         },
     credentials: true,
   })
-);
+)
 
 // Global Rate Limiting (100 req per 15 min per IP)
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
-  message: { success: false, error: 'Too many requests, please try again later.' },
-});
-app.use('/api', globalLimiter);
+  message: {
+    success: false,
+    error: "Too many requests, please try again later.",
+  },
+})
+app.use("/api", globalLimiter)
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, error: 'Too many login attempts, please try again later.' },
-});
+  message: {
+    success: false,
+    error: "Too many login attempts, please try again later.",
+  },
+})
 
 const refreshLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 120,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, error: 'Too many refresh attempts, please try again shortly.' },
-});
+  message: {
+    success: false,
+    error: "Too many refresh attempts, please try again shortly.",
+  },
+})
 
 const changePasswordLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, error: 'Too many password change attempts, please try again later.' },
-});
+  message: {
+    success: false,
+    error: "Too many password change attempts, please try again later.",
+  },
+})
 
 // Parse JSON bodies (limit 1mb)
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: "1mb" }))
 // Parse URL-encoded bodies
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }))
 // Parse cookies (for refresh token)
-app.use(cookieParser());
+app.use(cookieParser())
 
 // Compress responses
-app.use(compression());
+app.use(compression())
 
 // --- Routes ---
 
 if (env.enableDebugLogsRoute) {
-  app.use('/logs', logsRoutes);
-  app.use('/api/logs', logsRoutes);
+  app.use("/logs", logsRoutes)
+  app.use("/api/logs", logsRoutes)
 }
 
 // Health check
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ success: true, message: 'Server is healthy' });
-});
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ success: true, message: "Server is healthy" })
+})
 
-app.use('/api/auth/login', loginLimiter);
-app.use('/api/auth/refresh', refreshLimiter);
-app.use('/api/auth/change-password', changePasswordLimiter);
+app.use("/api/auth/login", loginLimiter)
+app.use("/api/auth/refresh", refreshLimiter)
+app.use("/api/auth/change-password", changePasswordLimiter)
 
-app.use('/api', async (req, res, next) => {
+app.use("/api", async (req, res, next) => {
   try {
-    await connectDB();
-    next();
+    await connectDB()
+    next()
   } catch (err) {
-    logger.error({ err, reqId: req.id, path: req.originalUrl }, 'Database connection failed');
-    res.status(503).json({ success: false, error: 'Database unavailable' });
+    logger.error(
+      { err, reqId: req.id, path: req.originalUrl },
+      "Database connection failed"
+    )
+    res.status(503).json({ success: false, error: "Database unavailable" })
   }
-});
+})
 
-app.use('/api/auth', authRoutes);
-app.use('/api/businesses', businessRoutes);
-app.use('/api/documents', documentRoutes);
-app.use('/api/access', investorAccessRoutes);
-app.use('/api/owners', ownerAccessRoutes);
-app.use('/api/requests', requestRoutes);
-app.use('/api/admin', adminRoutes);
+app.use("/api/auth", authRoutes)
+app.use("/api/businesses", businessRoutes)
+app.use("/api/documents", documentRoutes)
+app.use("/api/access", investorAccessRoutes)
+app.use("/api/owners", ownerAccessRoutes)
+app.use("/api/requests", requestRoutes)
+app.use("/api/admin", adminRoutes)
 
 // --- Error Handling ---
 
 // 404 handler
-app.use((req, res, next) => {
-  res.status(404).json({ success: false, error: 'Route not found' });
-});
+app.use((req, res, _next) => {
+  res.status(404).json({ success: false, error: "Route not found" })
+})
 
 // Central error handler (must be last)
-app.use(errorHandler);
+app.use(errorHandler)
 
-module.exports = app;
+module.exports = app

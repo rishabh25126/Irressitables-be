@@ -1,10 +1,10 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose")
 
 const businessSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, 'Business name is required'],
+      required: [true, "Business name is required"],
       trim: true,
     },
     slug: {
@@ -21,14 +21,14 @@ const businessSchema = new mongoose.Schema(
     },
     sector: {
       type: String,
-      required: [true, 'Business group is required'],
+      required: [true, "Business group is required"],
       trim: true,
       maxlength: 80,
     },
     stage: {
       type: String,
       required: true,
-      enum: ['Pre-seed', 'Seed', 'Series A', 'Series B', 'Series C+'],
+      enum: ["Pre-seed", "Seed", "Series A", "Series B", "Series C+"],
     },
     logo: {
       type: String, // S3 key
@@ -55,14 +55,14 @@ const businessSchema = new mongoose.Schema(
       },
     ],
     metrics: {
-      revenueRange: { type: String, default: null },   // e.g. "₹1Cr - ₹5Cr"
+      revenueRange: { type: String, default: null }, // e.g. "₹1Cr - ₹5Cr"
       growthPercent: { type: Number, default: null },
-      userBase: { type: String, default: null },       // e.g. "50,000+ users"
-      runway: { type: String, default: null },         // e.g. "18 months"
+      userBase: { type: String, default: null }, // e.g. "50,000+ users"
+      runway: { type: String, default: null }, // e.g. "18 months"
     },
     fundingAsk: {
       type: Number, // In INR
-      required: [true, 'Funding ask is required'],
+      required: [true, "Funding ask is required"],
     },
     useOfFunds: {
       type: String,
@@ -78,18 +78,18 @@ const businessSchema = new mongoose.Schema(
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
     },
   },
   { timestamps: true }
-);
+)
 
 // Full-text search index on key public fields
-businessSchema.index({ name: 'text', tagline: 'text', sector: 'text' });
+businessSchema.index({ name: "text", tagline: "text", sector: "text" })
 
 // Fast filter queries
-businessSchema.index({ sector: 1, stage: 1, isPublished: 1 });
+businessSchema.index({ sector: 1, stage: 1, isPublished: 1 })
 
-const Business = mongoose.model('Business', businessSchema);
-module.exports = Business;
+const Business = mongoose.model("Business", businessSchema)
+module.exports = Business

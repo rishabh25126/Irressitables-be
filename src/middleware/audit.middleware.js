@@ -1,5 +1,5 @@
-const AuditLog = require('../models/AuditLog');
-const logger = require('../config/logger');
+const AuditLog = require("../models/AuditLog")
+const logger = require("../config/logger")
 
 /**
  * Reusable middleware to log an action.
@@ -17,13 +17,16 @@ const logAction = (action, resource) => {
         resource,
         resourceId: req.params.id || null, // Best effort to capture ID from route params
         ip: req.ip,
-        userAgent: req.get('user-agent'),
-      });
+        userAgent: req.get("user-agent"),
+      })
     } catch (err) {
-      logger.error({ err, action, resource, reqId: req.id }, 'Failed to write audit log');
+      logger.error(
+        { err, action, resource, reqId: req.id },
+        "Failed to write audit log"
+      )
     }
-    next();
-  };
-};
+    next()
+  }
+}
 
-module.exports = { logAction };
+module.exports = { logAction }
