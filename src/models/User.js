@@ -29,6 +29,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       select: false,
     },
+    refreshTokenIssuedAt: {
+      type: Date,
+      select: false,
+    },
     isActive: {
       type: Boolean,
       default: true,

@@ -94,13 +94,29 @@ const globalLimiter = rateLimit({
 });
 app.use('/api', globalLimiter);
 
-// Specific stricter limit for auth routes
-const authLimiter = rateLimit({
+const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10, // Max 10 login/refresh attempts per IP
-  message: { success: false, error: 'Too many auth attempts, please try again later.' },
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many login attempts, please try again later.' },
 });
-app.use('/api/auth', authLimiter);
+
+const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many refresh attempts, please try again shortly.' },
+});
+
+const changePasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many password change attempts, please try again later.' },
+});
 
 // Parse JSON bodies (limit 1mb)
 app.use(express.json({ limit: '1mb' }));
@@ -123,6 +139,10 @@ if (env.enableDebugLogsRoute) {
 app.get('/api/health', (req, res) => {
   res.status(200).json({ success: true, message: 'Server is healthy' });
 });
+
+app.use('/api/auth/login', loginLimiter);
+app.use('/api/auth/refresh', refreshLimiter);
+app.use('/api/auth/change-password', changePasswordLimiter);
 
 app.use('/api', async (req, res, next) => {
   try {

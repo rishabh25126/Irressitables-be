@@ -12,7 +12,7 @@ const signAccessToken = (payload) => {
 };
 
 /**
- * Signs a long-lived refresh token (7 days default).
+ * Signs a long-lived refresh token (5 days default).
  * @param {Object} payload - { id }
  */
 const signRefreshToken = (payload) => {

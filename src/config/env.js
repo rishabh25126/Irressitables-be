@@ -31,7 +31,7 @@ const env = {
     accessSecret: process.env.JWT_ACCESS_SECRET,
     refreshSecret: process.env.JWT_REFRESH_SECRET,
     accessExpires: process.env.JWT_ACCESS_EXPIRES || '15m',
-    refreshExpires: process.env.JWT_REFRESH_EXPIRES || '7d',
+    refreshExpires: process.env.JWT_REFRESH_EXPIRES || '5d',
   },
   aws: {
     region: process.env.AWS_REGION,
@@ -41,10 +41,12 @@ const env = {
   },
   clientUrl: process.env.CLIENT_URL,
   /**
-   * When true (default): CORS reflects any request Origin so the API works from any site/IP.
-   * Set CORS_ALLOW_ANY_ORIGIN=false to allow only origins listed in CLIENT_URL (comma-separated).
+   * In development, reflect any request Origin by default for local testing.
+   * In production, require explicit allowlisted origins unless CORS_ALLOW_ANY_ORIGIN=true is set intentionally.
    */
-  corsAllowAnyOrigin: process.env.CORS_ALLOW_ANY_ORIGIN !== 'false',
+  corsAllowAnyOrigin:
+    process.env.CORS_ALLOW_ANY_ORIGIN === 'true' ||
+    (!process.env.CORS_ALLOW_ANY_ORIGIN && (process.env.NODE_ENV || 'development') !== 'production'),
   /** Origins allowed when corsAllowAnyOrigin is false */
   corsAllowedOrigins: process.env.CLIENT_URL.split(',')
     .map((s) => s.trim())
