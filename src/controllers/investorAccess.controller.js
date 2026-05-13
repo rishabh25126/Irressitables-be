@@ -1,46 +1,56 @@
 const InvestorAccess = require('../models/InvestorAccess');
-const Startup = require('../models/Startup');
+const Business = require('../models/Business');
 const AuditLog = require('../models/AuditLog');
 const { success, error } = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
+const { canManageBusiness, canViewBusinessDetails } = require('../utils/businessAccess');
 
 /**
- * GET /api/investor/startups
- * Investor only. Returns all startups the logged-in investor has access to.
+ * GET /api/investor/businesses
+ * Investor only. Returns all businesses the logged-in investor has access to.
  */
-const getMyStartups = asyncHandler(async (req, res) => {
+const getMyBusinesses = asyncHandler(async (req, res) => {
   const accessRecords = await InvestorAccess.find({ investorId: req.user._id })
     .populate({
-      path: 'startupId',
-      select: 'name slug tagline sector stage logo metrics fundingAsk',
+      path: 'businessId',
+      select: 'name slug tagline sector stage logo metrics fundingAsk description problem solution useOfFunds team isPublished',
     })
     .sort({ createdAt: -1 });
 
-  const startups = accessRecords.map((a) => ({
-    startup: a.startupId,
+  const businesses = accessRecords.map((a) => ({
+    business: a.businessId,
+    investorId: a.investorId,
     investedAmount: a.investedAmount,
     shares: a.shares,
     equityPercentage: a.equityPercentage,
   }));
 
-  return success(res, { startups });
+  return success(res, { businesses });
 });
 
 /**
  * POST /api/admin/access
- * Admin only. Grants an investor access to a specific startup.
- * Body: { investorId, startupId, investedAmount, shares, equityPercentage }
+ * Admin only. Grants an investor access to a specific business.
+ * Body: { investorId, businessId, investedAmount, shares, equityPercentage }
  */
 const assign = asyncHandler(async (req, res) => {
-  const { investorId, startupId, investedAmount = 0, shares = 0, equityPercentage = 0 } = req.body;
+  const { investorId, businessId, investedAmount = 0, shares = 0, equityPercentage = 0 } = req.body;
 
-  // Confirm startup exists
-  const startup = await Startup.findById(startupId);
-  if (!startup) return error(res, 'Startup not found.', 404);
+  if (!(await canManageBusiness(req.user, businessId))) {
+    return error(res, 'You do not have permission to manage this business.', 403);
+  }
+
+  if (Number(investedAmount) <= 0) {
+    return error(res, 'Investor assignment requires a positive invested amount.', 400);
+  }
+
+  // Confirm business exists
+  const business = await Business.findById(businessId);
+  if (!business) return error(res, 'Business not found.', 404);
 
   // Use findOneAndUpdate with upsert to allow updating existing equity or creating new access
   const access = await InvestorAccess.findOneAndUpdate(
-    { investorId, startupId },
+    { investorId, businessId },
     { 
       investedAmount, 
       shares, 
@@ -64,13 +74,17 @@ const assign = asyncHandler(async (req, res) => {
 
 /**
  * DELETE /api/admin/access
- * Admin only. Revokes an investor's access to a startup.
- * Body: { investorId, startupId }
+ * Admin only. Revokes an investor's access to a business.
+ * Body: { investorId, businessId }
  */
 const revoke = asyncHandler(async (req, res) => {
-  const { investorId, startupId } = req.body;
+  const { investorId, businessId } = req.body;
 
-  const deleted = await InvestorAccess.findOneAndDelete({ investorId, startupId });
+  if (!(await canManageBusiness(req.user, businessId))) {
+    return error(res, 'You do not have permission to manage this business.', 403);
+  }
+
+  const deleted = await InvestorAccess.findOneAndDelete({ investorId, businessId });
 
   if (!deleted) return error(res, 'Access record not found.', 404);
 
@@ -87,11 +101,15 @@ const revoke = asyncHandler(async (req, res) => {
 });
 
 /**
- * GET /api/admin/startups/:id/investors
- * Admin only. Returns all investors assigned to a specific startup.
+ * GET /api/admin/businesses/:id/investors
+ * Admin only. Returns all investors assigned to a specific business.
  */
-const getInvestorsForStartup = asyncHandler(async (req, res) => {
-  const records = await InvestorAccess.find({ startupId: req.params.id })
+const getInvestorsForBusiness = asyncHandler(async (req, res) => {
+  if (!(await canViewBusinessDetails(req.user, req.params.id))) {
+    return error(res, 'You do not have access to this business.', 403);
+  }
+
+  const records = await InvestorAccess.find({ businessId: req.params.id })
     .populate('investorId', 'name email')
     .populate('grantedBy', 'name')
     .sort({ createdAt: -1 });
@@ -99,4 +117,4 @@ const getInvestorsForStartup = asyncHandler(async (req, res) => {
   return success(res, { investors: records });
 });
 
-module.exports = { getMyStartups, assign, revoke, getInvestorsForStartup };
+module.exports = { getMyBusinesses, assign, revoke, getInvestorsForBusiness };

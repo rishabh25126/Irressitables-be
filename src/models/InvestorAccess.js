@@ -7,9 +7,9 @@ const investorAccessSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
-    startupId: {
+    businessId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Startup',
+      ref: 'Business',
       required: true,
     },
     investedAmount: {
@@ -33,8 +33,8 @@ const investorAccessSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Prevent duplicate access grants for same investor+startup pair
-investorAccessSchema.index({ investorId: 1, startupId: 1 }, { unique: true });
+// Prevent duplicate access grants for same investor+business pair
+investorAccessSchema.index({ investorId: 1, businessId: 1 }, { unique: true });
 
 const InvestorAccess = mongoose.model('InvestorAccess', investorAccessSchema);
 module.exports = InvestorAccess;

@@ -16,7 +16,7 @@ const s3Client = new S3Client({
  * Uploads a file buffer to S3.
  * @param {Object} options
  * @param {Buffer} options.buffer - File content
- * @param {string} options.key - S3 object key (e.g. "documents/startup-id/filename.pdf")
+ * @param {string} options.key - S3 object key (e.g. "documents/business-id/filename.pdf")
  * @param {string} options.mimeType - MIME type of the file
  * @returns {Promise<string>} The S3 object key (store this in DB, not the full URL)
  */

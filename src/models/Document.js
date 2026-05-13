@@ -2,9 +2,9 @@ const mongoose = require('mongoose');
 
 const documentSchema = new mongoose.Schema(
   {
-    startupId: {
+    businessId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Startup',
+      ref: 'Business',
       required: true,
     },
     name: {
@@ -43,8 +43,8 @@ const documentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Index for efficient lookups by startup
-documentSchema.index({ startupId: 1, category: 1 });
+// Index for efficient lookups by business
+documentSchema.index({ businessId: 1, category: 1 });
 
 const Document = mongoose.model('Document', documentSchema);
 module.exports = Document;

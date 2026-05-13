@@ -13,7 +13,7 @@ const auditLogSchema = new mongoose.Schema(
       // e.g. 'LOGIN', 'DOCUMENT_DOWNLOAD', 'STARTUP_CREATE', 'ACCESS_GRANTED'
     },
     resource: {
-      type: String, // e.g. 'Document', 'Startup', 'User'
+      type: String, // e.g. 'Document', 'Business', 'User'
       default: null,
     },
     resourceId: {

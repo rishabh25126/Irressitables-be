@@ -5,25 +5,31 @@ const { uploadToS3, getPresignedUrl, deleteFromS3 } = require('../utils/s3');
 const { success, error } = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
 const crypto = require('crypto');
+const { isOwnerForBusiness } = require('../utils/businessAccess');
 
 /**
- * GET /api/startups/:id/documents
- * Investor + Admin. Lists documents for a startup.
- * Investors must have access to the startup.
+ * GET /api/businesses/:id/documents
+ * Investor + Admin. Lists documents for a business.
+ * Investors must have access to the business.
  */
-const getByStartup = asyncHandler(async (req, res) => {
-  const startupId = req.params.id;
+const getByBusiness = asyncHandler(async (req, res) => {
+  const businessId = req.params.id;
 
-  // Investors: verify they have access to this startup
+  // Investors: verify they have access to this business
   if (req.user.role === 'investor') {
     const access = await InvestorAccess.findOne({
       investorId: req.user._id,
-      startupId,
+      businessId,
     });
-    if (!access) return error(res, 'You do not have access to this startup.', 403);
+    if (!access) return error(res, 'You do not have access to this business.', 403);
   }
 
-  const documents = await Document.find({ startupId })
+  if (req.user.role === 'owner') {
+    const access = await isOwnerForBusiness(req.user._id, businessId);
+    if (!access) return error(res, 'You do not have access to this business.', 403);
+  }
+
+  const documents = await Document.find({ businessId })
     .select('-s3Key') // Never expose raw S3 key to client
     .sort({ createdAt: -1 });
 
@@ -31,7 +37,7 @@ const getByStartup = asyncHandler(async (req, res) => {
 });
 
 /**
- * POST /api/startups/:id/documents
+ * POST /api/businesses/:id/documents
  * Admin only. Uploads a file to S3 and saves metadata in DB.
  * Expects multipart/form-data with fields: name, category, accessLevel
  */
@@ -39,11 +45,11 @@ const uploadDocument = asyncHandler(async (req, res) => {
   if (!req.file) return error(res, 'No file uploaded.', 400);
 
   const { name, category, accessLevel = 'investor' } = req.body;
-  const startupId = req.params.id;
+  const businessId = req.params.id;
 
   // Build a unique, organized S3 key
   const ext = req.file.originalname.split('.').pop();
-  const s3Key = `documents/${startupId}/${crypto.randomUUID()}.${ext}`;
+  const s3Key = `documents/${businessId}/${crypto.randomUUID()}.${ext}`;
 
   await uploadToS3({
     buffer: req.file.buffer,
@@ -52,7 +58,7 @@ const uploadDocument = asyncHandler(async (req, res) => {
   });
 
   const document = await Document.create({
-    startupId,
+    businessId,
     name,
     category,
     s3Key,
@@ -75,12 +81,17 @@ const getDownloadUrl = asyncHandler(async (req, res) => {
 
   if (!document) return error(res, 'Document not found.', 404);
 
-  // Investors: check startup access
+  // Investors: check business access
   if (req.user.role === 'investor') {
     const access = await InvestorAccess.findOne({
       investorId: req.user._id,
-      startupId: document.startupId,
+      businessId: document.businessId,
     });
+    if (!access) return error(res, 'You do not have access to this document.', 403);
+  }
+
+  if (req.user.role === 'owner') {
+    const access = await isOwnerForBusiness(req.user._id, document.businessId);
     if (!access) return error(res, 'You do not have access to this document.', 403);
   }
 
@@ -114,4 +125,4 @@ const remove = asyncHandler(async (req, res) => {
   return success(res, null, 'Document deleted.');
 });
 
-module.exports = { getByStartup, uploadDocument, getDownloadUrl, remove };
+module.exports = { getByBusiness, uploadDocument, getDownloadUrl, remove };

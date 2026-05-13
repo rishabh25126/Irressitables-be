@@ -1,10 +1,10 @@
 const mongoose = require('mongoose');
 
-const startupSchema = new mongoose.Schema(
+const businessSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, 'Startup name is required'],
+      required: [true, 'Business name is required'],
       trim: true,
     },
     slug: {
@@ -21,8 +21,9 @@ const startupSchema = new mongoose.Schema(
     },
     sector: {
       type: String,
-      required: [true, 'Sector is required'],
-      enum: ['Fintech', 'HealthTech', 'EdTech', 'SaaS', 'E-commerce', 'CleanTech', 'AgriTech', 'DeepTech', 'Other'],
+      required: [true, 'Business group is required'],
+      trim: true,
+      maxlength: 80,
     },
     stage: {
       type: String,
@@ -85,10 +86,10 @@ const startupSchema = new mongoose.Schema(
 );
 
 // Full-text search index on key public fields
-startupSchema.index({ name: 'text', tagline: 'text', sector: 'text' });
+businessSchema.index({ name: 'text', tagline: 'text', sector: 'text' });
 
 // Fast filter queries
-startupSchema.index({ sector: 1, stage: 1, isPublished: 1 });
+businessSchema.index({ sector: 1, stage: 1, isPublished: 1 });
 
-const Startup = mongoose.model('Startup', startupSchema);
-module.exports = Startup;
+const Business = mongoose.model('Business', businessSchema);
+module.exports = Business;

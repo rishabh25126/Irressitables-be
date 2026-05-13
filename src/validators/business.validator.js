@@ -1,9 +1,8 @@
 const { z } = require('zod');
 
-const SECTORS = ['Fintech', 'HealthTech', 'EdTech', 'SaaS', 'E-commerce', 'CleanTech', 'AgriTech', 'DeepTech', 'Other'];
 const STAGES = ['Pre-seed', 'Seed', 'Series A', 'Series B', 'Series C+'];
 
-const createStartupSchema = z.object({
+const createBusinessSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').trim(),
   slug: z
     .string()
@@ -11,7 +10,7 @@ const createStartupSchema = z.object({
     .regex(/^[a-z0-9-]+$/, 'Slug must be lowercase letters, numbers, and hyphens only')
     .trim(),
   tagline: z.string().max(160).trim().optional(),
-  sector: z.enum(SECTORS, { errorMap: () => ({ message: 'Invalid sector' }) }),
+  sector: z.string().min(2, 'Business group must be at least 2 characters').max(80, 'Business group is too long').trim(),
   stage: z.enum(STAGES, { errorMap: () => ({ message: 'Invalid stage' }) }),
   description: z.string().trim().optional(),
   problem: z.string().trim().optional(),
@@ -35,8 +34,14 @@ const createStartupSchema = z.object({
     .optional(),
   fundingAsk: z.number().positive('Funding ask must be a positive number'),
   useOfFunds: z.string().trim().optional(),
+  ownerIds: z.array(z.string().min(1)).min(1, 'At least one owner is required'),
 });
 
-const updateStartupSchema = createStartupSchema.partial();
+const updateBusinessSchema = createBusinessSchema
+  .omit({ ownerIds: true })
+  .partial()
+  .extend({
+    ownerIds: z.array(z.string().min(1)).optional(),
+  });
 
-module.exports = { createStartupSchema, updateStartupSchema };
+module.exports = { createBusinessSchema, updateBusinessSchema };

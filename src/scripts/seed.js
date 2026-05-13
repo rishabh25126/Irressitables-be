@@ -4,206 +4,244 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
 const User = require('../models/User');
-const Startup = require('../models/Startup');
+const Business = require('../models/Business');
+const Document = require('../models/Document');
+const InvestorAccess = require('../models/InvestorAccess');
+const OwnerAccess = require('../models/OwnerAccess');
+const EquityRequest = require('../models/EquityRequest');
+const AuditLog = require('../models/AuditLog');
 
-// Fallback to local if env is missing for dev purposes
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/investment-platform';
 
-const dummyStartups = [
+const dummyBusinesses = [
   {
-    name: "PayStack AI",
-    slug: "paystack-ai",
-    tagline: "AI-powered payment reconciliation for enterprises",
-    sector: "Fintech",
-    stage: "Series A",
-    description: "PayStack AI revolutionizes how enterprises handle payment reconciliation using advanced machine learning algorithms. Our platform processes millions of transactions daily, reducing reconciliation time by 95%.",
-    problem: "Traditional payment reconciliation is manual, error-prone, and time-consuming. Finance teams spend countless hours matching transactions, leading to delayed closings and increased operational costs.",
-    solution: "Our AI engine automatically matches transactions across multiple payment gateways, banks, and accounting systems with 99.9% accuracy. Real-time dashboards provide instant visibility into cash flow.",
+    name: 'Saffron Sips',
+    slug: 'saffron-sips',
+    tagline: 'Premium bottled chai and cold brew for modern retail shelves',
+    sector: 'Food & Beverages',
+    stage: 'Series A',
+    description: 'Saffron Sips builds premium Indian beverage brands for modern trade, quick commerce, and corporate pantry programs.',
+    problem: 'Most heritage-inspired beverage brands struggle to scale beyond boutique distribution while maintaining quality and shelf consistency.',
+    solution: 'Saffron Sips combines central production, strong retail distribution, and data-led merchandising to scale repeatable beverage SKUs nationwide.',
     team: [
-      { name: "Arjun Mehta", role: "CEO & Co-founder", linkedin: "https://linkedin.com" },
-      { name: "Priya Sharma", role: "CTO & Co-founder", linkedin: "https://linkedin.com" },
-      { name: "Vikram Singh", role: "VP Engineering", linkedin: "https://linkedin.com" },
+      { name: 'Aarav Bedi', role: 'CEO & Co-founder', linkedin: 'https://linkedin.com' },
+      { name: 'Nisha Kapoor', role: 'COO & Co-founder', linkedin: 'https://linkedin.com' },
     ],
-    metrics: {
-      revenueRange: "₹5-10Cr",
-      growthPercent: 142,
-      userBase: "150+ Enterprises",
-      runway: "18 months",
-    },
-    fundingAsk: 250000000, // 25Cr
+    metrics: { revenueRange: '₹4-7Cr', growthPercent: 118, userBase: '1,200+ Stores', runway: '20 months' },
+    fundingAsk: 180000000,
     isPublished: true,
   },
   {
-    name: "MediSync",
-    slug: "medisync",
-    tagline: "Unified healthcare data platform",
-    sector: "HealthTech",
-    stage: "Seed",
-    description: "MediSync creates a unified healthcare data ecosystem, enabling seamless information exchange between hospitals, clinics, laboratories, and patients.",
-    problem: "Healthcare data is fragmented across multiple systems, leading to poor patient outcomes, duplicate tests, and inefficient care coordination.",
-    solution: "Our HIPAA-compliant platform aggregates patient data from any source, creating a comprehensive health record accessible by authorized providers.",
+    name: 'Crumb & Co',
+    slug: 'crumb-co',
+    tagline: 'Fast-growing artisanal bakery chain with cloud-kitchen efficiency',
+    sector: 'Food & Beverages',
+    stage: 'Seed',
+    description: 'Crumb & Co operates neighborhood bakery cafes with centralized prep and strong delivery economics.',
+    problem: 'Independent bakeries face margin pressure from fragmented sourcing, uneven demand, and poor fulfillment systems.',
+    solution: 'Crumb & Co standardizes production, reduces wastage, and improves repeat demand through memberships, catering, and omnichannel delivery.',
     team: [
-      { name: "Dr. Ananya Reddy", role: "CEO & Founder", linkedin: "https://linkedin.com" },
-      { name: "Karthik Iyer", role: "CTO", linkedin: "https://linkedin.com" },
+      { name: 'Mihika Rao', role: 'Founder & CEO', linkedin: 'https://linkedin.com' },
+      { name: 'Kabir Sethi', role: 'Operations Lead', linkedin: 'https://linkedin.com' },
     ],
-    metrics: {
-      revenueRange: "₹1-3Cr",
-      growthPercent: 89,
-      userBase: "50+ Hospitals",
-      runway: "14 months",
-    },
+    metrics: { revenueRange: '₹1-2Cr', growthPercent: 86, userBase: '48K Annual Orders', runway: '15 months' },
+    fundingAsk: 70000000,
+    isPublished: true,
+  },
+  {
+    name: 'Threadline House',
+    slug: 'threadline-house',
+    tagline: 'Digitally native ethnicwear label with high repeat purchase',
+    sector: 'Fashion & Retail',
+    stage: 'Series A',
+    description: 'Threadline House designs premium ethnicwear collections sold through D2C, marketplaces, and select experience stores.',
+    problem: 'Fashion brands often lose margin and demand visibility due to poor inventory planning and disconnected sales channels.',
+    solution: 'Threadline House runs small-batch drops, fast replenishment loops, and channel-aware merchandising to improve sell-through and cash cycles.',
+    team: [
+      { name: 'Sara Malhotra', role: 'CEO & Creative Director', linkedin: 'https://linkedin.com' },
+      { name: 'Dev Oberoi', role: 'COO', linkedin: 'https://linkedin.com' },
+    ],
+    metrics: { revenueRange: '₹6-9Cr', growthPercent: 132, userBase: '95K Customers', runway: '18 months' },
+    fundingAsk: 220000000,
+    isPublished: true,
+  },
+  {
+    name: 'AisleOne',
+    slug: 'aisleone',
+    tagline: 'Specialty retail chain for home, gifting, and seasonal merchandise',
+    sector: 'Fashion & Retail',
+    stage: 'Seed',
+    description: 'AisleOne operates compact high-turn retail stores blending home accents, festive gifting, and private-label accessories.',
+    problem: 'Offline specialty retail lacks reliable merchandising data, causing overstocks, markdowns, and low conversion from walk-ins.',
+    solution: 'AisleOne uses centralized assortment planning, private-label margins, and store-level analytics to improve inventory turns and conversion.',
+    team: [
+      { name: 'Rohan Taneja', role: 'Founder & CEO', linkedin: 'https://linkedin.com' },
+      { name: 'Megha Arora', role: 'Merchandising Lead', linkedin: 'https://linkedin.com' },
+    ],
+    metrics: { revenueRange: '₹2-4Cr', growthPercent: 74, userBase: '12 Stores', runway: '14 months' },
+    fundingAsk: 90000000,
+    isPublished: true,
+  },
+  {
+    name: 'Rinse Ritual',
+    slug: 'rinse-ritual',
+    tagline: 'Tech-enabled premium laundromat chain for urban neighborhoods',
+    sector: 'Laundromats',
+    stage: 'Series A',
+    description: 'Rinse Ritual runs branded laundromat stores with subscription plans, pick-up/drop, and machine utilization analytics.',
+    problem: 'Traditional laundromats remain operationally fragmented, with weak customer retention and poor visibility into throughput and service quality.',
+    solution: 'Rinse Ritual combines app-led convenience, standardized store operations, and subscription loyalty to create a scalable neighborhood services brand.',
+    team: [
+      { name: 'Ishaan Verma', role: 'CEO & Founder', linkedin: 'https://linkedin.com' },
+      { name: 'Pallavi Jain', role: 'Head of Operations', linkedin: 'https://linkedin.com' },
+    ],
+    metrics: { revenueRange: '₹3-6Cr', growthPercent: 109, userBase: '22K Subscribers', runway: '19 months' },
+    fundingAsk: 160000000,
+    isPublished: true,
+  },
+  {
+    name: 'Spin Cycle Co',
+    slug: 'spin-cycle-co',
+    tagline: 'Compact laundromat franchise model for apartment-first catchments',
+    sector: 'Laundromats',
+    stage: 'Pre-seed',
+    description: 'Spin Cycle Co is building a franchise-ready laundromat format optimized for apartment clusters and gated communities.',
+    problem: 'Community laundry services are inconsistent, under-branded, and operationally difficult to monitor across micro-locations.',
+    solution: 'Spin Cycle Co offers compact store design, remote machine telemetry, and franchise dashboards that simplify rollout and service reliability.',
+    team: [
+      { name: 'Anmol Khanna', role: 'Founder', linkedin: 'https://linkedin.com' },
+      { name: 'Vidhi Suri', role: 'Franchise Ops', linkedin: 'https://linkedin.com' },
+    ],
+    metrics: { revenueRange: '₹60L-1.2Cr', growthPercent: 68, userBase: '9 Pilot Locations', runway: '11 months' },
+    fundingAsk: 40000000,
+    isPublished: true,
+  },
+  {
+    name: 'TailTrail',
+    slug: 'tailtrail',
+    tagline: 'Subscription-led pet wellness, grooming, and essentials platform',
+    sector: 'Pet Industry',
+    stage: 'Series B',
+    description: 'TailTrail serves pet parents through subscriptions, clinic partnerships, grooming centers, and a high-repeat essentials catalog.',
+    problem: 'Pet care spending is fragmented across grooming, nutrition, accessories, and care providers, limiting brand trust and recurring revenue.',
+    solution: 'TailTrail integrates recurring commerce, wellness reminders, and offline care fulfillment into one consumer pet ecosystem.',
+    team: [
+      { name: 'Zoya Merchant', role: 'CEO & Co-founder', linkedin: 'https://linkedin.com' },
+      { name: 'Harshad Vora', role: 'COO & Co-founder', linkedin: 'https://linkedin.com' },
+    ],
+    metrics: { revenueRange: '₹10-14Cr', growthPercent: 144, userBase: '140K Pet Families', runway: '21 months' },
+    fundingAsk: 280000000,
+    isPublished: true,
+  },
+  {
+    name: 'Paws & Play',
+    slug: 'paws-and-play',
+    tagline: 'Neighborhood pet retail and daycare brand with recurring memberships',
+    sector: 'Pet Industry',
+    stage: 'Seed',
+    description: 'Paws & Play combines pet retail, daycare, grooming, and weekend community events in neighborhood-first formats.',
+    problem: 'Pet parents often juggle multiple disconnected local providers for food, care, grooming, and boarding.',
+    solution: 'Paws & Play creates a trusted local pet-services brand with repeat visits, memberships, and higher-margin ancillary services.',
+    team: [
+      { name: 'Ira Menon', role: 'Founder & CEO', linkedin: 'https://linkedin.com' },
+      { name: 'Sarthak Nair', role: 'Operations Head', linkedin: 'https://linkedin.com' },
+    ],
+    metrics: { revenueRange: '₹1.5-3Cr', growthPercent: 91, userBase: '18K Members', runway: '13 months' },
     fundingAsk: 80000000,
     isPublished: true,
   },
-  {
-    name: "LearnVerse",
-    slug: "learnverse",
-    tagline: "Immersive VR learning experiences",
-    sector: "EdTech",
-    stage: "Pre-seed",
-    description: "LearnVerse transforms education through immersive VR experiences, making complex subjects tangible and engaging for students of all ages.",
-    problem: "Traditional education struggles to engage digital-native students. Abstract concepts remain difficult to grasp, leading to poor retention and outcomes.",
-    solution: "Our VR platform creates interactive 3D environments where students can explore everything from molecular structures to historical events firsthand.",
-    team: [
-      { name: "Rahul Gupta", role: "CEO & Founder", linkedin: "https://linkedin.com" },
-      { name: "Maya Krishnan", role: "Head of Product", linkedin: "https://linkedin.com" },
-    ],
-    metrics: {
-      revenueRange: "₹20-50L",
-      growthPercent: 215,
-      userBase: "25 Schools",
-      runway: "10 months",
-    },
-    fundingAsk: 30000000,
-    isPublished: true,
-  },
-  {
-    name: "CloudScale",
-    slug: "cloudscale",
-    tagline: "Automated infrastructure optimization",
-    sector: "SaaS",
-    stage: "Series A",
-    description: "CloudScale helps companies reduce cloud infrastructure costs by up to 60% through intelligent workload optimization and automated resource management.",
-    problem: "Cloud costs are spiraling out of control for most companies. Engineering teams lack visibility into spending and struggle to optimize resource utilization.",
-    solution: "Our platform analyzes usage patterns, predicts demand, and automatically right-sizes infrastructure. One-click optimization saves companies millions annually.",
-    team: [
-      { name: "Sanjay Patel", role: "CEO & Co-founder", linkedin: "https://linkedin.com" },
-      { name: "Deepa Nair", role: "CTO & Co-founder", linkedin: "https://linkedin.com" },
-      { name: "Amit Joshi", role: "VP Sales", linkedin: "https://linkedin.com" },
-    ],
-    metrics: {
-      revenueRange: "₹12-18Cr",
-      growthPercent: 78,
-      userBase: "200+ Companies",
-      runway: "24 months",
-    },
-    fundingAsk: 400000000,
-    isPublished: true, // featured: false in original, but published
-  },
-  {
-    name: "QuickKart",
-    slug: "quickkart",
-    tagline: "10-minute grocery delivery platform",
-    sector: "E-commerce",
-    stage: "Series B",
-    description: "QuickKart delivers groceries and essentials in under 10 minutes through a network of dark stores strategically placed across major cities.",
-    problem: "Traditional grocery shopping is time-consuming. Existing delivery services are slow, often taking hours or requiring advance scheduling.",
-    solution: "Our hyperlocal dark store network, combined with AI-powered inventory management, enables lightning-fast delivery while maintaining profitability.",
-    team: [
-      { name: "Ravi Kumar", role: "CEO & Founder", linkedin: "https://linkedin.com" },
-      { name: "Sneha Agarwal", role: "COO", linkedin: "https://linkedin.com" },
-      { name: "Vivek Menon", role: "CTO", linkedin: "https://linkedin.com" },
-    ],
-    metrics: {
-      revenueRange: "₹50-80Cr",
-      growthPercent: 156,
-      userBase: "2M+ Customers",
-      runway: "18 months",
-    },
-    fundingAsk: 800000000,
-    isPublished: true,
-  },
-  {
-    name: "GreenPower",
-    slug: "greenpower",
-    tagline: "Smart solar energy management",
-    sector: "CleanTech",
-    stage: "Series A",
-    description: "GreenPower maximizes solar energy ROI for businesses through intelligent monitoring, predictive maintenance, and grid optimization.",
-    problem: "Solar installations underperform by 20-30% due to poor monitoring, delayed maintenance, and suboptimal energy trading strategies.",
-    solution: "Our IoT sensors and AI platform detect issues before they impact production, automatically optimize energy storage and grid selling for maximum returns.",
-    team: [
-      { name: "Nikhil Shah", role: "CEO & Co-founder", linkedin: "https://linkedin.com" },
-      { name: "Pooja Desai", role: "CTO & Co-founder", linkedin: "https://linkedin.com" },
-    ],
-    metrics: {
-      revenueRange: "₹8-12Cr",
-      growthPercent: 95,
-      userBase: "300+ Sites",
-      runway: "20 months",
-    },
-    fundingAsk: 350000000,
-    isPublished: true,
-  },
-  {
-    name: "PropTech Hub",
-    slug: "proptech-hub",
-    tagline: "AI-powered property management",
-    sector: "SaaS",
-    stage: "Seed",
-    description: "PropTech Hub streamlines property management with AI-powered tenant screening, automated maintenance scheduling, and smart rent collection.",
-    problem: "Property managers juggle multiple tools and manual processes, leading to missed payments, delayed maintenance, and tenant churn.",
-    solution: "Our unified platform automates 80% of property management tasks, from lease signing to maintenance coordination to financial reporting.",
-    team: [
-      { name: "Sameer Roy", role: "CEO & Founder", linkedin: "https://linkedin.com" },
-      { name: "Anjali Bose", role: "Head of Product", linkedin: "https://linkedin.com" },
-    ],
-    metrics: {
-      revenueRange: "₹80L-1.5Cr",
-      growthPercent: 180,
-      userBase: "5000+ Units",
-      runway: "12 months",
-    },
-    fundingAsk: 60000000,
-    isPublished: true,
-  }
 ];
 
-const seedDB = async () => {
+async function ensureAdminUser() {
+  let admin = await User.findOne({ email: 'admin@ventureflow.com' });
+  if (admin) return admin;
+
+  const passwordHash = await bcrypt.hash('admin123', 12);
+  admin = await User.create({
+    name: 'System Admin',
+    email: 'admin@ventureflow.com',
+    passwordHash,
+    role: 'admin',
+  });
+  return admin;
+}
+
+async function ensureOwnerUser() {
+  let owner = await User.findOne({ email: 'owner@ventureflow.com' });
+  if (owner) return owner;
+
+  owner = await User.create({
+    name: 'Business Owner',
+    email: 'owner@ventureflow.com',
+    passwordHash: 'owner123',
+    role: 'owner',
+  });
+  return owner;
+}
+
+async function ensureInvestorUser() {
+  let investor = await User.findOne({ email: 'investor@ventureflow.com' });
+  if (investor) return investor;
+
+  investor = await User.create({
+    name: 'Sample Investor',
+    email: 'investor@ventureflow.com',
+    passwordHash: 'investor123',
+    role: 'investor',
+  });
+  return investor;
+}
+
+async function resetCollections() {
+  await Promise.all([
+    mongoose.connection.collection('businesses').deleteMany({}).catch(() => {}),
+    Document.deleteMany({}),
+    InvestorAccess.deleteMany({}),
+    OwnerAccess.deleteMany({}),
+    EquityRequest.deleteMany({}),
+    AuditLog.deleteMany({}),
+  ]);
+}
+
+async function seedDB() {
   try {
-    console.log('Connecting to MongoDB...', MONGO_URI);
     await mongoose.connect(MONGO_URI);
-    console.log('Connected.');
 
-    console.log('Clearing old data...');
-    await Startup.deleteMany({});
-    
-    // Check if an admin user exists to link as the creator
-    let admin = await User.findOne({ role: 'admin' });
-    if (!admin) {
-      console.log('Creating default admin user: admin@ventureflow.com / admin123');
-      admin = await User.create({
-        name: 'System Admin',
-        email: 'admin@ventureflow.com',
-        passwordHash: 'admin123', // Mongoose pre-save hook will hash this
-        role: 'admin'
-      });
-    }
+    await resetCollections();
+    const admin = await ensureAdminUser();
+    const owner = await ensureOwnerUser();
+    const investor = await ensureInvestorUser();
 
-    console.log('Inserting dummy startups...');
-    const startupsWithCreator = dummyStartups.map(s => ({
-      ...s,
-      createdBy: admin._id
-    }));
+    const createdBusinesses = await Business.insertMany(
+      dummyBusinesses.map((business) => ({
+        ...business,
+        createdBy: admin._id,
+      }))
+    );
 
-    await Startup.insertMany(startupsWithCreator);
+    const primaryBusiness = createdBusinesses.find((business) => business.slug === 'paws-and-play') || createdBusinesses[0];
 
-    console.log('Seed successful! Added', dummyStartups.length, 'startups.');
+    await OwnerAccess.create({
+      ownerId: owner._id,
+      businessId: primaryBusiness._id,
+      grantedBy: admin._id,
+    });
+
+    await InvestorAccess.create({
+      investorId: investor._id,
+      businessId: primaryBusiness._id,
+      investedAmount: 2500000,
+      shares: 50000,
+      equityPercentage: 5,
+      grantedBy: admin._id,
+    });
+
+    console.log(`Seed successful. Added ${dummyBusinesses.length} businesses.`);
     process.exit(0);
-  } catch (error) {
-    console.error('Seed failed:', error);
+  } catch (err) {
+    console.error('Seed failed:', err);
     process.exit(1);
   }
-};
+}
 
 seedDB();

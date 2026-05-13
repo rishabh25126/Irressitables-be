@@ -1,5 +1,5 @@
 const express = require('express');
-const { getMyStartups, assign, revoke, getInvestorsForStartup } = require('../controllers/investorAccess.controller');
+const { getMyBusinesses, assign, revoke, getInvestorsForBusiness } = require('../controllers/investorAccess.controller');
 const { protect } = require('../middleware/auth.middleware');
 const { requireRole } = require('../middleware/role.middleware');
 
@@ -8,12 +8,12 @@ const router = express.Router();
 router.use(protect);
 
 // Investor
-router.get('/my-startups', requireRole('investor'), getMyStartups);
+router.get('/my-businesses', requireRole('investor'), getMyBusinesses);
 
-// Admin
-router.use(requireRole('admin'));
+// Admin / Owner management and detail access
+router.get('/business/:id', requireRole('admin', 'owner', 'investor'), getInvestorsForBusiness);
+router.use(requireRole('admin', 'owner'));
 router.post('/assign', assign);
 router.delete('/revoke', revoke);
-router.get('/startup/:id', getInvestorsForStartup);
 
 module.exports = router;

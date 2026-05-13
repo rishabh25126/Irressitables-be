@@ -15,9 +15,10 @@ const errorHandler = require('./middleware/error.middleware');
 
 // Route imports
 const authRoutes = require('./routes/auth.routes');
-const startupRoutes = require('./routes/startup.routes');
+const businessRoutes = require('./routes/business.routes');
 const documentRoutes = require('./routes/document.routes');
 const investorAccessRoutes = require('./routes/investorAccess.routes');
+const ownerAccessRoutes = require('./routes/ownerAccess.routes');
 const requestRoutes = require('./routes/request.routes');
 const adminRoutes = require('./routes/admin.routes');
 const logsRoutes = require('./routes/logs.routes');
@@ -44,12 +45,14 @@ app.use(
       req: (req) => {
         const serialized = stdSerializers.req(req);
         if (serialized.headers) {
-          if (serialized.headers.authorization) {
-            serialized.headers.authorization = '[Redacted]';
+          const sanitizedHeaders = { ...serialized.headers };
+          if (sanitizedHeaders.authorization) {
+            sanitizedHeaders.authorization = '[Redacted]';
           }
-          if (serialized.headers.cookie) {
-            serialized.headers.cookie = '[Redacted]';
+          if (sanitizedHeaders.cookie) {
+            sanitizedHeaders.cookie = '[Redacted]';
           }
+          serialized.headers = sanitizedHeaders;
         }
         return serialized;
       },
@@ -132,9 +135,10 @@ app.use('/api', async (req, res, next) => {
 });
 
 app.use('/api/auth', authRoutes);
-app.use('/api/startups', startupRoutes);
+app.use('/api/businesses', businessRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/access', investorAccessRoutes);
+app.use('/api/owners', ownerAccessRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/admin', adminRoutes);
 
