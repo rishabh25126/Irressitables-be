@@ -282,13 +282,21 @@ const dummyBusinesses = [
 ]
 
 async function ensureAdminUser() {
-  let admin = await User.findOne({ email: "admin@ventureflow.com" })
-  if (admin) return admin
+  let admin = await User.findOne({
+    email: { $in: ["admin@irressitables.com", "admin@ventureflow.com"] },
+  })
+  if (admin) {
+    if (admin.email !== "admin@irressitables.com") {
+      admin.email = "admin@irressitables.com"
+      await admin.save()
+    }
+    return admin
+  }
 
   const passwordHash = await bcrypt.hash("admin123", 12)
   admin = await User.create({
     name: "System Admin",
-    email: "admin@ventureflow.com",
+    email: "admin@irressitables.com",
     passwordHash,
     role: "admin",
   })
@@ -296,12 +304,20 @@ async function ensureAdminUser() {
 }
 
 async function ensureOwnerUser() {
-  let owner = await User.findOne({ email: "owner@ventureflow.com" })
-  if (owner) return owner
+  let owner = await User.findOne({
+    email: { $in: ["owner@irressitables.com", "owner@ventureflow.com"] },
+  })
+  if (owner) {
+    if (owner.email !== "owner@irressitables.com") {
+      owner.email = "owner@irressitables.com"
+      await owner.save()
+    }
+    return owner
+  }
 
   owner = await User.create({
     name: "Business Owner",
-    email: "owner@ventureflow.com",
+    email: "owner@irressitables.com",
     passwordHash: "owner123",
     role: "owner",
   })
@@ -309,12 +325,20 @@ async function ensureOwnerUser() {
 }
 
 async function ensureInvestorUser() {
-  let investor = await User.findOne({ email: "investor@ventureflow.com" })
-  if (investor) return investor
+  let investor = await User.findOne({
+    email: { $in: ["investor@irressitables.com", "investor@ventureflow.com"] },
+  })
+  if (investor) {
+    if (investor.email !== "investor@irressitables.com") {
+      investor.email = "investor@irressitables.com"
+      await investor.save()
+    }
+    return investor
+  }
 
   investor = await User.create({
     name: "Sample Investor",
-    email: "investor@ventureflow.com",
+    email: "investor@irressitables.com",
     passwordHash: "investor123",
     role: "investor",
   })

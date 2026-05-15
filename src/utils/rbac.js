@@ -312,7 +312,7 @@ async function ensureDevelopmentSuperAdmin() {
   const passwordHash = crypto.randomBytes(6).toString("hex")
   await User.create({
     name: "Super Admin",
-    email: process.env.SUPER_ADMIN_EMAIL || "superadmin@ventureflow.com",
+    email: process.env.SUPER_ADMIN_EMAIL || "superadmin@irressitables.com",
     passwordHash: process.env.SUPER_ADMIN_PASSWORD || passwordHash,
     role: "super_admin",
   })
