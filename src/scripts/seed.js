@@ -282,16 +282,8 @@ const dummyBusinesses = [
 ]
 
 async function ensureAdminUser() {
-  let admin = await User.findOne({
-    email: { $in: ["admin@irressitables.com", "admin@ventureflow.com"] },
-  })
-  if (admin) {
-    if (admin.email !== "admin@irressitables.com") {
-      admin.email = "admin@irressitables.com"
-      await admin.save()
-    }
-    return admin
-  }
+  let admin = await User.findOne({ email: "admin@irressitables.com" })
+  if (admin) return admin
 
   const passwordHash = await bcrypt.hash("admin123", 12)
   admin = await User.create({
@@ -304,16 +296,8 @@ async function ensureAdminUser() {
 }
 
 async function ensureOwnerUser() {
-  let owner = await User.findOne({
-    email: { $in: ["owner@irressitables.com", "owner@ventureflow.com"] },
-  })
-  if (owner) {
-    if (owner.email !== "owner@irressitables.com") {
-      owner.email = "owner@irressitables.com"
-      await owner.save()
-    }
-    return owner
-  }
+  let owner = await User.findOne({ email: "owner@irressitables.com" })
+  if (owner) return owner
 
   owner = await User.create({
     name: "Business Owner",
@@ -325,16 +309,8 @@ async function ensureOwnerUser() {
 }
 
 async function ensureInvestorUser() {
-  let investor = await User.findOne({
-    email: { $in: ["investor@irressitables.com", "investor@ventureflow.com"] },
-  })
-  if (investor) {
-    if (investor.email !== "investor@irressitables.com") {
-      investor.email = "investor@irressitables.com"
-      await investor.save()
-    }
-    return investor
-  }
+  let investor = await User.findOne({ email: "investor@irressitables.com" })
+  if (investor) return investor
 
   investor = await User.create({
     name: "Sample Investor",
