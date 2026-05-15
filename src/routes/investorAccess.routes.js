@@ -18,10 +18,10 @@ router.get("/my-businesses", requireRole("investor"), getMyBusinesses)
 // Admin / Owner management and detail access
 router.get(
   "/business/:id",
-  requireRole("admin", "owner", "investor"),
+  requireRole("super_admin", "admin", "owner", "investor"),
   getInvestorsForBusiness
 )
-router.use(requireRole("admin", "owner"))
+router.use(requireRole("super_admin", "admin", "owner"))
 router.post("/assign", assign)
 router.delete("/revoke", revoke)
 

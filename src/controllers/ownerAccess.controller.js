@@ -5,6 +5,7 @@ const AuditLog = require("../models/AuditLog")
 const { success, error } = require("../utils/apiResponse")
 const asyncHandler = require("../utils/asyncHandler")
 const { canViewBusinessDetails } = require("../utils/businessAccess")
+const { hasPermission, resolveBaseRole } = require("../utils/rbac")
 
 const getMyBusinesses = asyncHandler(async (req, res) => {
   const ownerships = await OwnerAccess.find({ ownerId: req.user._id })
@@ -26,12 +27,16 @@ const getMyBusinesses = asyncHandler(async (req, res) => {
 const assign = asyncHandler(async (req, res) => {
   const { ownerId, businessId } = req.body
 
+  if (!hasPermission(req.user, "owner.assign_business")) {
+    return error(res, "You do not have permission to assign owners.", 403)
+  }
+
   const [owner, business] = await Promise.all([
     User.findById(ownerId),
     Business.findById(businessId),
   ])
 
-  if (!owner || owner.role !== "owner") {
+  if (!owner || (await resolveBaseRole(owner.role)) !== "owner") {
     return error(res, "Owner not found.", 404)
   }
 
@@ -42,7 +47,7 @@ const assign = asyncHandler(async (req, res) => {
   const record = await OwnerAccess.findOneAndUpdate(
     { ownerId, businessId },
     { grantedBy: req.user._id },
-    { new: true, upsert: true }
+    { upsert: true, returnDocument: "after" }
   )
 
   await AuditLog.create({
@@ -59,6 +64,10 @@ const assign = asyncHandler(async (req, res) => {
 
 const revoke = asyncHandler(async (req, res) => {
   const { ownerId, businessId } = req.body
+
+  if (!hasPermission(req.user, "owner.revoke_business")) {
+    return error(res, "You do not have permission to revoke owners.", 403)
+  }
 
   const existing = await OwnerAccess.findOne({ ownerId, businessId })
   if (!existing) {

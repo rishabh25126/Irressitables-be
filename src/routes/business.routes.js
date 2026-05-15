@@ -24,19 +24,19 @@ router.get("/", getAll)
 router.get(
   "/manage/list",
   protect,
-  requireRole("admin", "owner"),
+  requireRole("super_admin", "admin", "owner"),
   getManageableBusinesses
 )
 router.get(
   "/manage/:id",
   protect,
-  requireRole("admin", "owner"),
+  requireRole("super_admin", "admin", "owner"),
   getManageableOne
 )
 router.get("/:slug", getOne)
 
 // Admin / Owner management routes
-router.use(protect, requireRole("admin", "owner"))
+router.use(protect, requireRole("super_admin", "admin", "owner"))
 router.post("/", validate(createBusinessSchema), create)
 router.put("/:id", validate(updateBusinessSchema), update)
 router.delete("/:id", remove)

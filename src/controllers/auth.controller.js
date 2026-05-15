@@ -9,6 +9,7 @@ const { success, error } = require("../utils/apiResponse")
 const asyncHandler = require("../utils/asyncHandler")
 const env = require("../config/env")
 const crypto = require("crypto")
+const { buildAccessProfile, buildUserResponse } = require("../utils/rbac")
 
 const REFRESH_COOKIE_MAX_AGE = 5 * 24 * 60 * 60 * 1000
 
@@ -98,17 +99,13 @@ const login = asyncHandler(async (req, res) => {
   res.cookie("refreshToken", refreshToken, getRefreshCookieOptions())
 
   await logAuthEvent(req, user._id, "LOGIN", user._id)
+  const accessProfile = await buildAccessProfile(user)
 
   return success(
     res,
     {
       accessToken,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      user: buildUserResponse(user, accessProfile),
     },
     "Login successful"
   )
@@ -175,17 +172,13 @@ const refreshToken = asyncHandler(async (req, res) => {
 
   res.cookie("refreshToken", newRefreshToken, getRefreshCookieOptions())
   await logAuthEvent(req, user._id, "REFRESH", user._id)
+  const accessProfile = await buildAccessProfile(user)
 
   return success(
     res,
     {
       accessToken: newAccessToken,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      user: buildUserResponse(user, accessProfile),
     },
     "Token refreshed"
   )
@@ -207,7 +200,7 @@ const logout = asyncHandler(async (req, res) => {
     const user = await User.findOneAndUpdate(
       { refreshToken: { $in: [tokenHash, token] } },
       { refreshToken: null, refreshTokenIssuedAt: null },
-      { new: true }
+      { returnDocument: "after" }
     )
 
     if (user) {

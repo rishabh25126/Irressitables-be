@@ -13,7 +13,9 @@ const requireRole = (...roles) => {
       return error(res, "Not authenticated.", 401)
     }
 
-    if (!roles.includes(req.user.role)) {
+    const effectiveRole = req.user.baseRole || req.user.role
+
+    if (!roles.includes(effectiveRole)) {
       return error(
         res,
         `Access denied. Required role: ${roles.join(" or ")}.`,

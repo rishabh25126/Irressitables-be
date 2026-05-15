@@ -1,10 +1,17 @@
 const EquityRequest = require("../models/EquityRequest")
 const Business = require("../models/Business")
 const AuditLog = require("../models/AuditLog")
+const InvestorAccess = require("../models/InvestorAccess")
+const User = require("../models/User")
 const { success, error } = require("../utils/apiResponse")
 const asyncHandler = require("../utils/asyncHandler")
 const OwnerAccess = require("../models/OwnerAccess")
 const { canManageBusiness } = require("../utils/businessAccess")
+const {
+  buildAccessProfile,
+  hasPermission,
+  resolveBaseRole,
+} = require("../utils/rbac")
 
 const STATUS_ALIASES = {
   APPROVED: "ACCEPTED",
@@ -122,7 +129,7 @@ const getAdminRequests = asyncHandler(async (req, res) => {
     status: { $in: requestedStatuses },
   }
 
-  if (req.user.role === "owner") {
+  if ((req.user.baseRole || req.user.role) === "owner") {
     const ownedBusinessIds = await OwnerAccess.distinct("businessId", {
       ownerId: req.user._id,
     })
@@ -216,6 +223,10 @@ const updateRequestStatus = asyncHandler(async (req, res) => {
     )
   }
 
+  if (!hasPermission(req.user, "request.review")) {
+    return error(res, "You do not have permission to review requests.", 403)
+  }
+
   request.status = status
   request.handledBy = req.user._id
   await request.save()
@@ -235,9 +246,154 @@ const updateRequestStatus = asyncHandler(async (req, res) => {
   return success(res, { request }, `Request marked as ${status}.`)
 })
 
+/**
+ * POST /api/admin/requests/:id/convert
+ * Admin/owner only. Convert a request into investor/equity changes.
+ */
+const convertRequest = asyncHandler(async (req, res) => {
+  const request = await EquityRequest.findById(req.params.id)
+  if (!request) return error(res, "Request not found.", 404)
+
+  if (!(await canManageBusiness(req.user, request.businessId))) {
+    return error(
+      res,
+      "You do not have permission to manage this business request.",
+      403
+    )
+  }
+
+  if (!hasPermission(req.user, "request.convert_to_investor")) {
+    return error(res, "You do not have permission to convert requests.", 403)
+  }
+
+  const {
+    mode = "existing",
+    investorId: requestedInvestorId,
+    name,
+    email,
+    password,
+    investedAmount = 0,
+    shares = 0,
+    equityPercentage = 0,
+  } = req.body
+
+  if (Number(investedAmount) <= 0) {
+    return error(
+      res,
+      "Investor assignment requires a positive invested amount.",
+      400
+    )
+  }
+
+  let investorId = requestedInvestorId || request.investorId
+  const normalizedMode = String(mode || "existing").toLowerCase()
+
+  if (normalizedMode === "create") {
+    if (!hasPermission(req.user, "investor.create")) {
+      return error(res, "You do not have permission to create investors.", 403)
+    }
+
+    if (!name || !email || !password) {
+      return error(
+        res,
+        "Name, email, and temporary password are required to create an investor.",
+        400
+      )
+    }
+
+    const existing = await User.findOne({ email: String(email).toLowerCase() })
+    if (existing) {
+      return error(res, "Email already registered.", 409, "DUPLICATE_EMAIL")
+    }
+
+    const createdInvestor = await User.create({
+      name,
+      email,
+      passwordHash: password,
+      role: "investor",
+    })
+
+    investorId = createdInvestor._id
+
+    await AuditLog.create({
+      userId: req.user._id,
+      action: "CREATE_INVESTOR_FROM_REQUEST",
+      resource: "User",
+      resourceId: createdInvestor._id,
+      ip: req.ip,
+      userAgent: req.get("user-agent"),
+    })
+  }
+
+  if (!investorId) {
+    return error(res, "An investor is required for this conversion.", 400)
+  }
+
+  if (!hasPermission(req.user, "investor.assign_equity")) {
+    return error(res, "You do not have permission to assign equity.", 403)
+  }
+
+  const investor = await User.findById(investorId)
+  if (!investor) {
+    return error(res, "Investor not found.", 404)
+  }
+
+  const investorBaseRole = await resolveBaseRole(investor.role)
+  if (investorBaseRole !== "investor") {
+    return error(res, "Selected user is not an investor.", 400)
+  }
+
+  const access = await InvestorAccess.findOneAndUpdate(
+    { investorId, businessId: request.businessId },
+    {
+      investedAmount,
+      shares,
+      equityPercentage,
+      grantedBy: req.user._id,
+    },
+    { upsert: true, returnDocument: "after" }
+  )
+
+  request.investorId = investor._id
+  request.requestedAmount = investedAmount
+  request.requestedShares = shares
+  request.requestedEquityPercentage = equityPercentage
+  request.status = "ACCEPTED"
+  request.handledBy = req.user._id
+  await request.save()
+
+  await AuditLog.create({
+    userId: req.user._id,
+    action: "CONVERT_EQUITY_REQUEST",
+    resource: "EquityRequest",
+    resourceId: request._id,
+    ip: req.ip,
+    userAgent: req.get("user-agent"),
+  })
+
+  const accessProfile = await buildAccessProfile(investor)
+
+  return success(
+    res,
+    {
+      request,
+      investor: {
+        id: investor._id,
+        name: investor.name,
+        email: investor.email,
+        role: accessProfile.roleKey,
+        baseRole: accessProfile.baseRole,
+      },
+      access,
+    },
+    "Request converted successfully."
+  )
+})
+
 module.exports = {
   createRequest,
   createInterestRequest,
   getAdminRequests,
   updateRequestStatus,
+  convertRequest,
 }

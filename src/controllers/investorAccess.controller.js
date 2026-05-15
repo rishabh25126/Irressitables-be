@@ -7,6 +7,7 @@ const {
   canManageBusiness,
   canViewBusinessDetails,
 } = require("../utils/businessAccess")
+const { hasPermission } = require("../utils/rbac")
 
 /**
  * GET /api/investor/businesses
@@ -54,6 +55,10 @@ const assign = asyncHandler(async (req, res) => {
     )
   }
 
+  if (!hasPermission(req.user, "investor.assign_equity")) {
+    return error(res, "You do not have permission to assign equity.", 403)
+  }
+
   if (Number(investedAmount) <= 0) {
     return error(
       res,
@@ -75,7 +80,7 @@ const assign = asyncHandler(async (req, res) => {
       equityPercentage,
       grantedBy: req.user._id,
     },
-    { new: true, upsert: true }
+    { upsert: true, returnDocument: "after" }
   )
 
   await AuditLog.create({
@@ -104,6 +109,10 @@ const revoke = asyncHandler(async (req, res) => {
       "You do not have permission to manage this business.",
       403
     )
+  }
+
+  if (!hasPermission(req.user, "investor.revoke_equity")) {
+    return error(res, "You do not have permission to revoke equity.", 403)
   }
 
   const deleted = await InvestorAccess.findOneAndDelete({

@@ -13,16 +13,18 @@ async function isInvestorForBusiness(userId, businessId) {
 
 async function canManageBusiness(user, businessId) {
   if (!user) return false
-  if (user.role === "admin") return true
-  if (user.role !== "owner") return false
+  const effectiveRole = user.baseRole || user.role
+  if (effectiveRole === "super_admin" || effectiveRole === "admin") return true
+  if (effectiveRole !== "owner") return false
   return isOwnerForBusiness(user._id, businessId)
 }
 
 async function canViewBusinessDetails(user, businessId) {
   if (!user) return false
-  if (user.role === "admin") return true
-  if (user.role === "owner") return isOwnerForBusiness(user._id, businessId)
-  if (user.role === "investor")
+  const effectiveRole = user.baseRole || user.role
+  if (effectiveRole === "super_admin" || effectiveRole === "admin") return true
+  if (effectiveRole === "owner") return isOwnerForBusiness(user._id, businessId)
+  if (effectiveRole === "investor")
     return isInvestorForBusiness(user._id, businessId)
   return false
 }

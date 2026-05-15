@@ -4,6 +4,7 @@ const User = require("../models/User")
 const { success, error } = require("../utils/apiResponse")
 const asyncHandler = require("../utils/asyncHandler")
 const { canManageBusiness } = require("../utils/businessAccess")
+const { hasPermission } = require("../utils/rbac")
 
 /**
  * GET /api/businesses
@@ -43,7 +44,9 @@ const getManageableBusinesses = asyncHandler(async (req, res) => {
   const { limit = 100 } = req.query
   const pageLimit = Math.min(parseInt(limit), 200)
 
-  if (req.user.role === "admin") {
+  const effectiveRole = req.user.baseRole || req.user.role
+
+  if (effectiveRole === "super_admin" || effectiveRole === "admin") {
     const businesses = await Business.find({})
       .select(
         "name slug tagline sector stage logo metrics fundingAsk isPublished createdAt"
@@ -117,8 +120,8 @@ const getManageableOne = asyncHandler(async (req, res) => {
  * Admin only. Creates a new business (unpublished by default).
  */
 const create = asyncHandler(async (req, res) => {
-  if (req.user.role !== "admin") {
-    return error(res, "Only admins can create businesses.", 403)
+  if (!hasPermission(req.user, "business.create")) {
+    return error(res, "You do not have permission to create businesses.", 403)
   }
 
   const { ownerIds = [], ...payload } = req.body
@@ -160,18 +163,23 @@ const update = asyncHandler(async (req, res) => {
     )
   }
 
+  if (!hasPermission(req.user, "business.update")) {
+    return error(res, "You do not have permission to update businesses.", 403)
+  }
+
   const { ownerIds, ...payload } = req.body
 
   const business = await Business.findByIdAndUpdate(
     req.params.id,
     { $set: payload },
-    { new: true, runValidators: true }
+    { returnDocument: "after", runValidators: true }
   )
 
   if (!business) return error(res, "Business not found.", 404)
 
   if (Array.isArray(ownerIds)) {
-    if (req.user.role !== "admin") {
+    const effectiveRole = req.user.baseRole || req.user.role
+    if (!["super_admin", "admin"].includes(effectiveRole)) {
       return error(res, "Only admins can change business ownership.", 403)
     }
 
@@ -201,8 +209,8 @@ const update = asyncHandler(async (req, res) => {
  * Admin only. Permanently deletes a business.
  */
 const remove = asyncHandler(async (req, res) => {
-  if (req.user.role !== "admin") {
-    return error(res, "Only admins can delete businesses.", 403)
+  if (!hasPermission(req.user, "business.delete")) {
+    return error(res, "You do not have permission to delete businesses.", 403)
   }
 
   const business = await Business.findByIdAndDelete(req.params.id)
@@ -230,6 +238,10 @@ const togglePublish = asyncHandler(async (req, res) => {
   const business = await Business.findById(req.params.id)
 
   if (!business) return error(res, "Business not found.", 404)
+
+  if (!hasPermission(req.user, "business.publish")) {
+    return error(res, "You do not have permission to publish businesses.", 403)
+  }
 
   business.isPublished = !business.isPublished
   await business.save()

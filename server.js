@@ -3,6 +3,7 @@ const logger = require("./src/config/logger")
 const app = require("./src/app")
 const connectDB = require("./src/config/db")
 const env = require("./src/config/env")
+const { ensureRbacSeed } = require("./src/utils/rbac")
 
 // Handle uncaught exceptions gracefully
 process.on("uncaughtException", (err) => {
@@ -14,6 +15,8 @@ let server
 
 // Connect to Database, then start server
 connectDB().then(() => {
+  return ensureRbacSeed()
+}).then(() => {
   server = app.listen(env.port, () => {
     logger.info({ port: env.port, nodeEnv: env.nodeEnv }, "Server listening")
   })

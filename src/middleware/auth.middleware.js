@@ -1,6 +1,7 @@
 const { verifyToken } = require("../utils/jwt")
 const User = require("../models/User")
 const { error } = require("../utils/apiResponse")
+const { buildAccessProfile } = require("../utils/rbac")
 
 /**
  * Protects routes — verifies the access token from the Authorization header.
@@ -27,6 +28,12 @@ const protect = async (req, res, next) => {
     if (!user.isActive)
       return error(res, "Account is deactivated.", 403, "ACCOUNT_INACTIVE")
 
+    const accessProfile = await buildAccessProfile(user)
+
+    user.roleKey = accessProfile.roleKey
+    user.baseRole = accessProfile.baseRole
+    user.permissions = accessProfile.permissions
+    user.isSuperAdmin = accessProfile.isSuperAdmin
     req.user = user
     next()
   } catch (err) {

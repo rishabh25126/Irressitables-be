@@ -14,17 +14,25 @@ const router = express.Router()
 router.use(protect)
 
 // Investor + Admin
-router.get("/business/:id", getByBusiness)
-router.get("/:id/download", getDownloadUrl)
+router.get(
+  "/business/:id",
+  requireRole("investor", "owner", "admin", "super_admin"),
+  getByBusiness
+)
+router.get(
+  "/:id/download",
+  requireRole("investor", "owner", "admin", "super_admin"),
+  getDownloadUrl
+)
 
 // Admin only
 router.post(
   "/business/:id",
-  requireRole("admin"),
+  requireRole("admin", "super_admin"),
   upload.single("file"),
   handleUploadError,
   uploadDocument
 )
-router.delete("/:id", requireRole("admin"), remove)
+router.delete("/:id", requireRole("admin", "super_admin"), remove)
 
 module.exports = router

@@ -15,10 +15,10 @@ router.use(protect)
 router.get("/my-businesses", requireRole("owner"), getMyBusinesses)
 router.get(
   "/business/:id",
-  requireRole("admin", "owner", "investor"),
+  requireRole("super_admin", "admin", "owner", "investor"),
   getOwnersForBusiness
 )
-router.use(requireRole("admin"))
+router.use(requireRole("super_admin", "admin"))
 router.post("/assign", assign)
 router.delete("/revoke", revoke)
 

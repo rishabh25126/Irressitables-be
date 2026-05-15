@@ -14,9 +14,10 @@ const { isOwnerForBusiness } = require("../utils/businessAccess")
  */
 const getByBusiness = asyncHandler(async (req, res) => {
   const businessId = req.params.id
+  const effectiveRole = req.user.baseRole || req.user.role
 
   // Investors: verify they have access to this business
-  if (req.user.role === "investor") {
+  if (effectiveRole === "investor") {
     const access = await InvestorAccess.findOne({
       investorId: req.user._id,
       businessId,
@@ -25,7 +26,7 @@ const getByBusiness = asyncHandler(async (req, res) => {
       return error(res, "You do not have access to this business.", 403)
   }
 
-  if (req.user.role === "owner") {
+  if (effectiveRole === "owner") {
     const access = await isOwnerForBusiness(req.user._id, businessId)
     if (!access)
       return error(res, "You do not have access to this business.", 403)
@@ -80,11 +81,12 @@ const uploadDocument = asyncHandler(async (req, res) => {
  */
 const getDownloadUrl = asyncHandler(async (req, res) => {
   const document = await Document.findById(req.params.id).select("+s3Key")
+  const effectiveRole = req.user.baseRole || req.user.role
 
   if (!document) return error(res, "Document not found.", 404)
 
   // Investors: check business access
-  if (req.user.role === "investor") {
+  if (effectiveRole === "investor") {
     const access = await InvestorAccess.findOne({
       investorId: req.user._id,
       businessId: document.businessId,
@@ -93,7 +95,7 @@ const getDownloadUrl = asyncHandler(async (req, res) => {
       return error(res, "You do not have access to this document.", 403)
   }
 
-  if (req.user.role === "owner") {
+  if (effectiveRole === "owner") {
     const access = await isOwnerForBusiness(req.user._id, document.businessId)
     if (!access)
       return error(res, "You do not have access to this document.", 403)
