@@ -1,11 +1,16 @@
 const Document = require("../models/Document")
+const Business = require("../models/Business")
 const AuditLog = require("../models/AuditLog")
 const InvestorAccess = require("../models/InvestorAccess")
 const { uploadToS3, getPresignedUrl, deleteFromS3 } = require("../utils/s3")
 const { success, error } = require("../utils/apiResponse")
 const asyncHandler = require("../utils/asyncHandler")
 const crypto = require("crypto")
-const { isOwnerForBusiness } = require("../utils/businessAccess")
+const {
+  isOwnerForBusiness,
+  canManageBusiness,
+} = require("../utils/businessAccess")
+const { hasPermission } = require("../utils/rbac")
 
 /**
  * GET /api/businesses/:id/documents
@@ -34,7 +39,7 @@ const getByBusiness = asyncHandler(async (req, res) => {
 
   const documents = await Document.find({ businessId })
     .select("-s3Key") // Never expose raw S3 key to client
-    .sort({ createdAt: -1 })
+    .sort({ displayOrder: 1, createdAt: -1 })
 
   return success(res, { documents })
 })
@@ -47,7 +52,26 @@ const getByBusiness = asyncHandler(async (req, res) => {
 const uploadDocument = asyncHandler(async (req, res) => {
   if (!req.file) return error(res, "No file uploaded.", 400)
 
-  const { name, category, accessLevel = "investor" } = req.body
+  if (!(await canManageBusiness(req.user, req.params.id))) {
+    return error(
+      res,
+      "You do not have permission to manage this business.",
+      403
+    )
+  }
+
+  if (!hasPermission(req.user, "document.upload")) {
+    return error(res, "You do not have permission to upload documents.", 403)
+  }
+
+  const {
+    name,
+    category,
+    accessLevel = "investor",
+    description = "",
+    sectionId = null,
+    displayOrder = 0,
+  } = req.body
   const businessId = req.params.id
 
   // Build a unique, organized S3 key
@@ -68,7 +92,19 @@ const uploadDocument = asyncHandler(async (req, res) => {
     fileSize: req.file.size,
     mimeType: req.file.mimetype,
     accessLevel,
+    description,
+    sectionId,
+    displayOrder: Number(displayOrder) || 0,
     uploadedBy: req.user._id,
+  })
+
+  await AuditLog.create({
+    userId: req.user._id,
+    action: "DOCUMENT_UPLOADED",
+    resource: "Document",
+    resourceId: document._id,
+    ip: req.ip,
+    userAgent: req.get("user-agent"),
   })
 
   return success(res, { document }, "Document uploaded.", 201)
@@ -116,6 +152,72 @@ const getDownloadUrl = asyncHandler(async (req, res) => {
   return success(res, { url, expiresInSeconds: 900 })
 })
 
+const getPublicDownloadUrl = asyncHandler(async (req, res) => {
+  const document = await Document.findById(req.params.id)
+
+  if (!document || document.accessLevel !== "public") {
+    return error(res, "Document not found.", 404)
+  }
+
+  const business = await Business.findById(document.businessId).select(
+    "isPublished"
+  )
+  if (!business || !business.isPublished) {
+    return error(res, "Document not found.", 404)
+  }
+
+  const url = await getPresignedUrl(document.s3Key, 900)
+  return success(res, { url, expiresInSeconds: 900 })
+})
+
+const updateDocument = asyncHandler(async (req, res) => {
+  const document = await Document.findById(req.params.id)
+  if (!document) return error(res, "Document not found.", 404)
+
+  if (!(await canManageBusiness(req.user, document.businessId))) {
+    return error(
+      res,
+      "You do not have permission to manage this business.",
+      403
+    )
+  }
+
+  if (!hasPermission(req.user, "document.update")) {
+    return error(res, "You do not have permission to update documents.", 403)
+  }
+
+  const payload = {}
+  for (const key of [
+    "name",
+    "category",
+    "accessLevel",
+    "description",
+    "sectionId",
+    "displayOrder",
+  ]) {
+    if (key in req.body) {
+      payload[key] = req.body[key]
+    }
+  }
+
+  const updated = await Document.findByIdAndUpdate(
+    req.params.id,
+    { $set: payload },
+    { returnDocument: "after", runValidators: true }
+  ).select("-s3Key")
+
+  await AuditLog.create({
+    userId: req.user._id,
+    action: "DOCUMENT_UPDATED",
+    resource: "Document",
+    resourceId: updated._id,
+    ip: req.ip,
+    userAgent: req.get("user-agent"),
+  })
+
+  return success(res, { document: updated }, "Document updated.")
+})
+
 /**
  * DELETE /api/documents/:id
  * Admin only. Deletes from S3 and removes DB record.
@@ -125,10 +227,38 @@ const remove = asyncHandler(async (req, res) => {
 
   if (!document) return error(res, "Document not found.", 404)
 
+  if (!(await canManageBusiness(req.user, document.businessId))) {
+    return error(
+      res,
+      "You do not have permission to manage this business.",
+      403
+    )
+  }
+
+  if (!hasPermission(req.user, "document.delete")) {
+    return error(res, "You do not have permission to delete documents.", 403)
+  }
+
   await deleteFromS3(document.s3Key)
   await document.deleteOne()
+
+  await AuditLog.create({
+    userId: req.user._id,
+    action: "DOCUMENT_DELETED",
+    resource: "Document",
+    resourceId: document._id,
+    ip: req.ip,
+    userAgent: req.get("user-agent"),
+  })
 
   return success(res, null, "Document deleted.")
 })
 
-module.exports = { getByBusiness, uploadDocument, getDownloadUrl, remove }
+module.exports = {
+  getByBusiness,
+  uploadDocument,
+  getDownloadUrl,
+  getPublicDownloadUrl,
+  updateDocument,
+  remove,
+}

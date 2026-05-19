@@ -34,6 +34,20 @@ const documentSchema = new mongoose.Schema(
       enum: ["public", "investor"],
       default: "investor",
     },
+    description: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    sectionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "BusinessSection",
+      default: null,
+    },
+    displayOrder: {
+      type: Number,
+      default: 0,
+    },
     uploadedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -45,6 +59,7 @@ const documentSchema = new mongoose.Schema(
 
 // Index for efficient lookups by business
 documentSchema.index({ businessId: 1, category: 1 })
+documentSchema.index({ businessId: 1, sectionId: 1, displayOrder: 1 })
 
 const Document = mongoose.model("Document", documentSchema)
 module.exports = Document

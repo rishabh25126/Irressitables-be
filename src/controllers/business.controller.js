@@ -1,10 +1,46 @@
 const Business = require("../models/Business")
+const { BusinessSection } = require("../models/BusinessSection")
+const Document = require("../models/Document")
 const OwnerAccess = require("../models/OwnerAccess")
 const User = require("../models/User")
 const { success, error } = require("../utils/apiResponse")
 const asyncHandler = require("../utils/asyncHandler")
-const { canManageBusiness } = require("../utils/businessAccess")
+const {
+  canManageBusiness,
+  canViewBusinessDetails,
+} = require("../utils/businessAccess")
 const { hasPermission } = require("../utils/rbac")
+const {
+  serializeDocument,
+  serializeSection,
+  sortSections,
+} = require("../utils/businessSections")
+
+async function getSectionPayload(businessId, audience) {
+  const sections = await BusinessSection.find({ businessId })
+    .populate("publishedState.attachments")
+    .populate("draftState.attachments")
+    .sort({ createdAt: 1 })
+
+  return sections
+    .map((section) => serializeSection(section, audience))
+    .filter(Boolean)
+    .sort(sortSections)
+}
+
+async function getDocumentPayload(businessId, audience) {
+  const filter = { businessId }
+  if (audience === "public") {
+    filter.accessLevel = "public"
+  }
+
+  const documents = await Document.find(filter).sort({
+    displayOrder: 1,
+    createdAt: -1,
+  })
+
+  return documents.map(serializeDocument)
+}
 
 /**
  * GET /api/businesses
@@ -85,7 +121,12 @@ const getOne = asyncHandler(async (req, res) => {
 
   if (!business) return error(res, "Business not found.", 404)
 
-  return success(res, { business })
+  const [sections, documents] = await Promise.all([
+    getSectionPayload(business._id, "public"),
+    getDocumentPayload(business._id, "public"),
+  ])
+
+  return success(res, { business, sections, documents })
 })
 
 /**
@@ -112,7 +153,41 @@ const getManageableOne = asyncHandler(async (req, res) => {
     "name email role"
   )
 
-  return success(res, { business, owners })
+  const [sections, documents] = await Promise.all([
+    getSectionPayload(business._id, "manage"),
+    getDocumentPayload(business._id, "manage"),
+  ])
+
+  return success(res, { business, owners, sections, documents })
+})
+
+/**
+ * GET /api/businesses/access/:slug
+ * Logged-in detail endpoint. Investors see public + investor sections/documents.
+ * Owners/Admins see full manageable content.
+ */
+const getAccessibleOne = asyncHandler(async (req, res) => {
+  const business = await Business.findOne({ slug: req.params.slug }).populate(
+    "createdBy",
+    "name"
+  )
+
+  if (!business) return error(res, "Business not found.", 404)
+
+  if (!(await canViewBusinessDetails(req.user, business._id))) {
+    return error(res, "You do not have access to this business.", 403)
+  }
+
+  const effectiveRole = req.user.baseRole || req.user.role
+  const audience =
+    effectiveRole === "investor" ? "investor" : "manage"
+
+  const [sections, documents] = await Promise.all([
+    getSectionPayload(business._id, audience),
+    getDocumentPayload(business._id, audience),
+  ])
+
+  return success(res, { business, sections, documents })
 })
 
 /**
@@ -258,6 +333,7 @@ module.exports = {
   getAll,
   getManageableBusinesses,
   getOne,
+  getAccessibleOne,
   getManageableOne,
   create,
   update,

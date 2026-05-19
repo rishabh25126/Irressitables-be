@@ -39,6 +39,24 @@ const PERMISSION_CATALOG = [
     category: "Businesses",
   },
   {
+    key: "business.section.create",
+    label: "Create Business Sections",
+    description: "Add structured sections to a business profile.",
+    category: "Businesses",
+  },
+  {
+    key: "business.section.update",
+    label: "Edit Business Sections",
+    description: "Edit business section content, order, and visibility.",
+    category: "Businesses",
+  },
+  {
+    key: "business.section.delete",
+    label: "Delete Business Sections",
+    description: "Delete or disable business sections.",
+    category: "Businesses",
+  },
+  {
     key: "investor.create",
     label: "Create Investors",
     description: "Create investor accounts.",
@@ -91,6 +109,24 @@ const PERMISSION_CATALOG = [
     label: "Revoke Owner Access",
     description: "Remove owner assignment from a business.",
     category: "Owners",
+  },
+  {
+    key: "document.upload",
+    label: "Upload Documents",
+    description: "Upload business documents and media.",
+    category: "Documents",
+  },
+  {
+    key: "document.update",
+    label: "Edit Documents",
+    description: "Edit document metadata and section placement.",
+    category: "Documents",
+  },
+  {
+    key: "document.delete",
+    label: "Delete Documents",
+    description: "Delete business documents and media.",
+    category: "Documents",
   },
   {
     key: "request.review",
@@ -192,6 +228,13 @@ const BUILTIN_ROLE_PERMISSION_DEFAULTS = {
   })),
   owner: [
     "business.update",
+    "business.publish",
+    "business.section.create",
+    "business.section.update",
+    "business.section.delete",
+    "document.upload",
+    "document.update",
+    "document.delete",
     "investor.create",
     "investor.update",
     "investor.assign_equity",
@@ -287,14 +330,22 @@ async function ensureBuiltInRolePermissions() {
     const role = roleMap.get(roleKey)
     if (!role) continue
 
-    const existing = await RolePermission.find({ roleId: role._id }).lean()
-    if (existing.length > 0) continue
-
     const defaults = BUILTIN_ROLE_PERMISSION_DEFAULTS[roleKey] || []
     if (defaults.length === 0) continue
 
+    const existing = await RolePermission.find({ roleId: role._id }).lean()
+    const existingByPermission = new Map(
+      existing.map((entry) => [entry.permissionKey, entry])
+    )
+
+    const missingDefaults = defaults.filter(
+      (entry) => !existingByPermission.has(entry.permissionKey)
+    )
+
+    if (!missingDefaults.length) continue
+
     await RolePermission.insertMany(
-      defaults.map((entry) => ({
+      missingDefaults.map((entry) => ({
         roleId: role._id,
         permissionKey: entry.permissionKey,
         effect: entry.effect,
